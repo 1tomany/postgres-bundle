@@ -11,6 +11,16 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 class PostgresBundle extends AbstractBundle
 {
     /**
+     * @see Symfony\Component\Config\Definition\ConfigurableInterface
+     *
+     * @param DefinitionConfigurator<'array'> $definition
+     */
+    public function configure(DefinitionConfigurator $definition): void
+    {
+        $definition->import('../config/config.php');
+    }
+
+    /**
      * @see Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface
      */
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
@@ -29,21 +39,11 @@ class PostgresBundle extends AbstractBundle
     }
 
     /**
-     * @see Symfony\Component\Config\Definition\ConfigurableInterface
-     *
-     * @param DefinitionConfigurator<'array'> $definition
-     */
-    public function configure(DefinitionConfigurator $definition): void
-    {
-        $definition->import('../config/config.php');
-    }
-
-    /**
      * @see Symfony\Component\DependencyInjection\Extension\ConfigurableExtensionInterface
      *
      * @param array{
      *   middleware?: array{
-     *     time_zone: 'UTC',
+     *     time_zone: non-empty-string,
      *   },
      * } $config
      */
@@ -52,7 +52,9 @@ class PostgresBundle extends AbstractBundle
         $container->import('../config/services.php');
 
         if (isset($config['middleware'])) {
-            $builder->getDefinition('1tomany.postgres_bundle.set_time_zone_middleware')->setArgument('$timeZone', $config['middleware']['time_zone']);
+            $builder
+                ->getDefinition('1tomany.postgres_bundle.middleware.set_time_zone')
+                ->setArgument('$timeZone', $config['middleware']['time_zone']);
         }
     }
 }
