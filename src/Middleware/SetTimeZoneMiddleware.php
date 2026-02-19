@@ -25,7 +25,7 @@ final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
     public function wrap(Driver $driver): Driver
     {
         $wrappedDriver = new class($driver, $this->timeZone) extends AbstractDriverMiddleware {
-            public function __construct(Driver $wrappedDriver, private string $timeZone = 'UTC')
+            public function __construct(Driver $wrappedDriver, private string $timeZone)
             {
                 parent::__construct($wrappedDriver);
             }

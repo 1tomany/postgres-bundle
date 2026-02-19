@@ -11,10 +11,16 @@ class PostgresBundle extends AbstractBundle
     /**
      * @see Symfony\Component\DependencyInjection\Extension\ConfigurableExtensionInterface
      *
-     * @param array<string, mixed> $config
+     * @param array{
+     *   middleware: array{
+     *     time_zone: 'UTC',
+     *   },
+     * } $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $container->import('../config/services.php');
+
+        $builder->getDefinition('1tomany.postgres_bundle.set_time_zone_middleware')->setArgument('$timeZone', $config['middleware']['time_zone']);
     }
 }
