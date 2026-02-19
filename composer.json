@@ -7,6 +7,7 @@
     "prefer-stable": true,
     "require": {
         "php": ">=8.4",
+        "doctrine/dbal": "^4.4",
         "symfony/config": "^7.2|^8.0",
         "symfony/dependency-injection": "^7.2|^8.0",
         "symfony/http-kernel": "^7.2|^8.0"
