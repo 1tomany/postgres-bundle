@@ -6,7 +6,9 @@ use Doctrine\DBAL\Driver;
 use Doctrine\DBAL\Driver\Connection;
 use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
 use Doctrine\DBAL\Driver\Middleware as MiddlewareInterface;
+use Doctrine\DBAL\Exception as DbalExceptionInterface;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
+use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function in_array;
 use function sprintf;
@@ -32,7 +34,12 @@ final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
             public function connect(#[\SensitiveParameter] array $params): Connection
             {
                 $connection = parent::connect($params);
-                $connection->exec(sprintf("SET timezone = '%s'", $this->timeZone));
+
+                try {
+                    $connection->exec(sprintf("SET timezone = '%s'", $this->timeZone));
+                } catch (DbalExceptionInterface $e) {
+                    throw new RuntimeException(sprintf('Setting the timezone to "%s" failed.', $this->timeZone), previous: $e);
+                }
 
                 return $connection;
             }
