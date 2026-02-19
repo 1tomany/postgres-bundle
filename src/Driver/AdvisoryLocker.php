@@ -39,17 +39,23 @@ final readonly class AdvisoryLocker
         }
     }
 
+    /**
+     * @throws InvalidArgumentException the `$lockKey` is less than one
+     */
     private function assertLockIdIsPositive(int $lockKey): void
     {
         if ($lockKey < 1) {
-            throw new InvalidArgumentException('Lock key must be greater than zero.');
+            throw new InvalidArgumentException('The advisory lock key must be greater than zero.');
         }
     }
 
+    /**
+     * @throws RuntimeException a database connection does not exist
+     */
     private function assertDatabaseConnectionExists(): void
     {
         if (!$this->connection->isConnected()) {
-            throw new RuntimeException('Advisory lock failed because a connection to the database does not exist.');
+            throw new RuntimeException('The advisory lock failed because a connection to the database does not exist.');
         }
     }
 }
