@@ -1,6 +1,6 @@
 {
     "name": "1tomany/postgres-bundle",
-    "description": "Symfony bundle that ...",
+    "description": "Symfony bundle that enhances Postgres for Doctrine",
     "license": "MIT",
     "type": "symfony-bundle",
     "minimum-stability": "stable",
