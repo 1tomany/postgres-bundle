@@ -2,6 +2,8 @@
 
 namespace OneToMany\PostgresBundle;
 
+use OneToMany\PostgresBundle\Function\EarthDistance\Boundary;
+use OneToMany\PostgresBundle\Function\EarthDistance\Distance;
 use OneToMany\PostgresBundle\Type\EarthDistance\Earth;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -25,17 +27,23 @@ class PostgresBundle extends AbstractBundle
      */
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        if (!$builder->hasExtension('doctrine')) {
-            return;
-        }
-
-        $builder->prependExtensionConfig('doctrine', [
-            'dbal' => [
-                'types' => [
-                    'earth' => Earth::class,
+        if ($builder->hasExtension('doctrine')) {
+            $builder->prependExtensionConfig('doctrine', [
+                'dbal' => [
+                    'types' => [
+                        'earth' => Earth::class,
+                    ],
                 ],
-            ],
-        ]);
+                'orm' => [
+                    'dql' => [
+                        'numeric_functions' => [
+                            'BOUNDARY' => Boundary::class,
+                            'DISTANCE' => Distance::class,
+                        ],
+                    ],
+                ],
+            ]);
+        }
     }
 
     /**
