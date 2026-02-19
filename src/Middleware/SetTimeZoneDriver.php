@@ -7,6 +7,10 @@ use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
 use Doctrine\DBAL\ParameterType;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
 
+use function in_array;
+use function sprintf;
+use function timezone_identifiers_list;
+
 final class SetTimeZoneDriver extends AbstractDriverMiddleware
 {
     private string $timeZone = 'UTC';
@@ -24,8 +28,8 @@ final class SetTimeZoneDriver extends AbstractDriverMiddleware
 
     public function setTimeZone(string $timeZone): static
     {
-        if (!\in_array($timeZone, \timezone_identifiers_list())) {
-            throw new InvalidArgumentException(\sprintf('The timezone "%s" is not valid.', $timeZone));
+        if (!in_array($timeZone, timezone_identifiers_list())) {
+            throw new InvalidArgumentException(sprintf('The timezone "%s" is not valid.', $timeZone));
         }
 
         $this->timeZone = $timeZone;
