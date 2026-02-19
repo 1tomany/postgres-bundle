@@ -1,5 +1,5 @@
 {
-    "name": "1tomany/doctrine-postgres-bundle",
+    "name": "1tomany/postgres-bundle",
     "description": "Symfony bundle that ...",
     "license": "MIT",
     "type": "symfony-bundle",
@@ -18,12 +18,12 @@
     },
     "autoload": {
         "psr-4": {
-            "OneToMany\\DoctrinePostgresBundle\\": "src/"
+            "OneToMany\\PostgresBundle\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "OneToMany\\DoctrinePostgresBundle\\Tests\\": "tests/"
+            "OneToMany\\PostgresBundle\\Tests\\": "tests/"
         }
     },
     "scripts": {
