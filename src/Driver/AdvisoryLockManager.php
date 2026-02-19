@@ -9,7 +9,7 @@ use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function sprintf;
 
-final readonly class AdvisoryLocker
+final readonly class AdvisoryLockManager
 {
     public function __construct(private Connection $connection)
     {
