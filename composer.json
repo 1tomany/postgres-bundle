@@ -1,0 +1,44 @@
+{
+    "name": "1tomany/php-ai-bundle",
+    "description": "Symfony bundle that provides bindings for the 1tomany/php-ai package",
+    "license": "MIT",
+    "type": "symfony-bundle",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.4",
+        "1tomany/php-ai": "^0.0.8",
+        "symfony/config": "^7.2|^8.0",
+        "symfony/dependency-injection": "^7.2|^8.0",
+        "symfony/http-kernel": "^7.2|^8.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.93",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^12.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "OneToMany\\PhpAiBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "OneToMany\\PhpAiBundle\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "fix": "./vendor/bin/php-cs-fixer fix",
+        "stan": "./vendor/bin/phpstan",
+        "test": "./vendor/bin/phpunit"
+    },
+    "authors": [
+        {
+            "name": "Vic Cherubini",
+            "email": "vcherubini@gmail.com"
+        }
+    ],
+    "config": {
+        "sort-packages": true
+    }
+}
