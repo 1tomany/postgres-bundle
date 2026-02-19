@@ -2,6 +2,7 @@
 
 namespace OneToMany\PostgresBundle;
 
+use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -9,10 +10,20 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 class PostgresBundle extends AbstractBundle
 {
     /**
+     * @see Symfony\Component\Config\Definition\ConfigurableInterface
+     *
+     * @param DefinitionConfigurator<'array'> $definition
+     */
+    public function configure(DefinitionConfigurator $definition): void
+    {
+        $definition->import('../config/config.php');
+    }
+
+    /**
      * @see Symfony\Component\DependencyInjection\Extension\ConfigurableExtensionInterface
      *
      * @param array{
-     *   middleware: array{
+     *   middleware?: array{
      *     time_zone: 'UTC',
      *   },
      * } $config
@@ -21,6 +32,8 @@ class PostgresBundle extends AbstractBundle
     {
         $container->import('../config/services.php');
 
-        $builder->getDefinition('1tomany.postgres_bundle.set_time_zone_middleware')->setArgument('$timeZone', $config['middleware']['time_zone']);
+        if (isset($config['middleware'])) {
+            $builder->getDefinition('1tomany.postgres_bundle.set_time_zone_middleware')->setArgument('$timeZone', $config['middleware']['time_zone']);
+        }
     }
 }
