@@ -4,7 +4,7 @@
         <ini name="error_reporting" value="-1"/>
     </php>
     <testsuites>
-        <testsuite name="data-uri-bundle Test Suite">
+        <testsuite name="postgres-bundle Test Suite">
             <directory>./tests/</directory>
         </testsuite>
     </testsuites>
