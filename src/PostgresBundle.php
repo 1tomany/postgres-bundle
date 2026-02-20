@@ -8,6 +8,7 @@ use OneToMany\PostgresBundle\Type\EarthDistance\Earth;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
 class PostgresBundle extends AbstractBundle
@@ -50,6 +51,9 @@ class PostgresBundle extends AbstractBundle
      * @see Symfony\Component\DependencyInjection\Extension\ConfigurableExtensionInterface
      *
      * @param array{
+     *   advisory_lock_manager?: array{
+     *     connection: non-empty-string,
+     *   },
      *   middleware?: array{
      *     time_zone: non-empty-string,
      *   },
@@ -58,6 +62,12 @@ class PostgresBundle extends AbstractBundle
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $container->import('../config/services.php');
+
+        if (isset($config['advisory_lock_manager'])) {
+            $builder
+                ->getDefinition('1tomany.postgres_bundle.driver.advisory_lock_manager')
+                ->setArgument('$connection', new Reference($config['advisory_lock_manager']['connection']));
+        }
 
         if (isset($config['middleware'])) {
             $builder
