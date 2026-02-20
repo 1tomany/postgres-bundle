@@ -12,15 +12,15 @@ composer require 1tomany/postgres-bundle
 
 ## Configuration
 
-This bundle will automatically use the default Doctrine DBAL connection object configured with a standard Symfony installation. If you wish to change this, create a file named `postgres.yaml` in `config/packages/` with the following contents and replace the `advisory_lock_manager.connection` property with the service ID of the DBAL connection to use:
+This bundle is automatically configured to work with the default Doctrine DBAL connection. To change the default configuration, create a file named `postgres.yaml` in `config/packages/` with the following contents and adjust accordingly:
 
 ```yaml
 postgres:
     advisory_lock_manager:
-        connection: 'doctrine.dbal.non_default_connection'
+        connection: "doctrine.dbal.default_connection"
 
     middleware:
-        time_zone: 'America/Chicago'
+        time_zone: "UTC"
 ```
 
 ## Credits
