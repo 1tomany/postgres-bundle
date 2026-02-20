@@ -12,6 +12,7 @@ return static function (ContainerConfigurator $container): void {
 
             // Drivers
             ->set('1tomany.postgres_bundle.driver.advisory_lock_manager', AdvisoryLockManager::class)
+                ->arg('$connection', service('doctrine.dbal.default_connection'))
             ->alias(AdvisoryLockManager::class, service('1tomany.postgres_bundle.driver.advisory_lock_manager'))
 
             // Middlewares

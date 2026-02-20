@@ -9,6 +9,13 @@ $configurator = static function (DefinitionConfigurator $configurator): void {
     $configurator
         ->rootNode()
             ->children()
+                ->arrayNode('advisory_lock_manager')
+                    ->children()
+                        ->stringNode('connection')
+                            ->cannotBeEmpty()
+                        ->end()
+                    ->end()
+                ->end()
                 ->arrayNode('middleware')
                     ->children()
                         ->stringNode('time_zone')
