@@ -12,10 +12,13 @@ composer require 1tomany/postgres-bundle
 
 ## Configuration
 
-By default, this bundle will automatically set the timezone of the Postgres server to UTC. If you wish to change this, create a file named `postgres.yaml` in `config/packages/` and add the following lines:
+This bundle will automatically use the default Doctrine DBAL connection object configured with a standard Symfony installation. If you wish to change this, create a file named `postgres.yaml` in `config/packages/` with the following contents and replace the `advisory_lock_manager.connection` property with the service ID of the DBAL connection to use:
 
 ```yaml
 postgres:
+    advisory_lock_manager:
+        connection: 'doctrine.dbal.non_default_connection'
+
     middleware:
         time_zone: 'America/Chicago'
 ```
