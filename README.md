@@ -17,10 +17,10 @@ This bundle is automatically configured to work with the default Doctrine DBAL c
 ```yaml
 postgres:
     advisory_lock_manager:
-        connection: "doctrine.dbal.default_connection"
+        connection: 'doctrine.dbal.default_connection'
 
     middleware:
-        time_zone: "UTC"
+        time_zone: 'UTC'
 ```
 
 ## Credits
