@@ -7,7 +7,7 @@ This package enhances Postgres for Doctrine.
 Install the bundle using Composer:
 
 ```
-composer require 1tomany/doctrine-postgres-bundle
+composer require 1tomany/postgres-bundle
 ```
 
 ## Configuration
