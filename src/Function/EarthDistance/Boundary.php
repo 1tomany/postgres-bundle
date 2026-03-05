@@ -62,10 +62,10 @@ final class Boundary extends FunctionNode
     public function getSql(SqlWalker $sqlWalker): string
     {
         if (
-            null === $this->earthCol
-            || null === $this->latitude
-            || null === $this->longitude
-            || null === $this->boxMeters
+            null === $this->earthCol ||
+            null === $this->latitude ||
+            null === $this->longitude ||
+            null === $this->boxMeters
         ) {
             throw new ParsingFunctionFailedNullTokensFoundException($this->name);
         }

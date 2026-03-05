@@ -55,9 +55,9 @@ final class Distance extends FunctionNode
     public function getSql(SqlWalker $sqlWalker): string
     {
         if (
-            null === $this->earthCol
-            || null === $this->latitude
-            || null === $this->longitude
+            null === $this->earthCol ||
+            null === $this->latitude ||
+            null === $this->longitude
         ) {
             throw new ParsingFunctionFailedNullTokensFoundException($this->name);
         }
