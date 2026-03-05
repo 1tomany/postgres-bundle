@@ -17,6 +17,7 @@ $configurator = static function (DefinitionConfigurator $configurator): void {
                     ->end()
                 ->end()
                 ->arrayNode('middleware')
+                    ->addDefaultsIfNotSet()
                     ->children()
                         ->stringNode('time_zone')
                             ->cannotBeEmpty()
