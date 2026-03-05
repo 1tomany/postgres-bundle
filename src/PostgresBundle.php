@@ -67,10 +67,16 @@ class PostgresBundle extends AbstractBundle
     {
         $container->import('../config/services.php');
 
-        if ($builder->hasDefinition(AdvisoryLockManager::class) && isset($config['advisory_lock_manager'])) {
-            $builder
-                ->getDefinition(AdvisoryLockManager::class)
-                ->setArgument('$connection', new Reference($config['advisory_lock_manager']['connection']));
+        if (isset($config['advisory_lock_manager'])) {
+            $connectionId = $config['advisory_lock_manager']['connection'];
+
+            if ($builder->hasDefinition(AdvisoryLockManager::class)) {
+                $connection = new Reference($connectionId);
+
+                $builder
+                    ->getDefinition(AdvisoryLockManager::class)
+                    ->setArgument('$connection', $connection);
+            }
         }
 
         if ($builder->hasDefinition(SetTimeZoneMiddleware::class)) {
