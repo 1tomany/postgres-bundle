@@ -2,8 +2,10 @@
 
 namespace OneToMany\PostgresBundle;
 
+use OneToMany\PostgresBundle\Driver\AdvisoryLockManager;
 use OneToMany\PostgresBundle\Function\EarthDistance\Boundary;
 use OneToMany\PostgresBundle\Function\EarthDistance\Distance;
+use OneToMany\PostgresBundle\Middleware\SetTimeZoneMiddleware;
 use OneToMany\PostgresBundle\Type\EarthDistance\Earth;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -13,6 +15,8 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
 class PostgresBundle extends AbstractBundle
 {
+    protected string $extensionAlias = 'onetomany_postgres';
+
     /**
      * @see Symfony\Component\Config\Definition\ConfigurableInterface
      *
@@ -54,7 +58,7 @@ class PostgresBundle extends AbstractBundle
      *   advisory_lock_manager?: array{
      *     connection: non-empty-string,
      *   },
-     *   middleware?: array{
+     *   middleware: array{
      *     time_zone: non-empty-string,
      *   },
      * } $config
@@ -64,14 +68,20 @@ class PostgresBundle extends AbstractBundle
         $container->import('../config/services.php');
 
         if (isset($config['advisory_lock_manager'])) {
-            $builder
-                ->getDefinition('1tomany.postgres_bundle.driver.advisory_lock_manager')
-                ->setArgument('$connection', new Reference($config['advisory_lock_manager']['connection']));
+            $connectionId = $config['advisory_lock_manager']['connection'];
+
+            if ($builder->hasDefinition(AdvisoryLockManager::class)) {
+                $connection = new Reference($connectionId);
+
+                $builder
+                    ->getDefinition(AdvisoryLockManager::class)
+                    ->setArgument('$connection', $connection);
+            }
         }
 
-        if (isset($config['middleware'])) {
+        if ($builder->hasDefinition(SetTimeZoneMiddleware::class)) {
             $builder
-                ->getDefinition('1tomany.postgres_bundle.middleware.set_time_zone')
+                ->getDefinition(SetTimeZoneMiddleware::class)
                 ->setArgument('$timeZone', $config['middleware']['time_zone']);
         }
     }

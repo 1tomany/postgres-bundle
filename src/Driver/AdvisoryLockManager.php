@@ -22,7 +22,7 @@ class AdvisoryLockManager
         try {
             $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$lockKey]);
         } catch (DbalExceptionInterface $e) {
-            throw new RuntimeException(sprintf('Acquiring the advisory lock %d failed.', $lockKey), previous: $e);
+            throw new RuntimeException(sprintf('Acquiring advisory lock %d failed.', $lockKey), previous: $e);
         }
     }
 
@@ -33,13 +33,13 @@ class AdvisoryLockManager
         try {
             $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
         } catch (DbalExceptionInterface $e) {
-            throw new RuntimeException(sprintf('Releasing the advisory lock %d failed.', $lockKey), previous: $e);
+            throw new RuntimeException(sprintf('Releasing advisory lock %d failed.', $lockKey), previous: $e);
         }
     }
 
     public function getConnection(): Connection
     {
-        return $this->connection ?? throw new RuntimeException('The advisory lock failed because the DBAL Connection object is null.');
+        return $this->connection ?? throw new RuntimeException('Accessing the advisory locker failed because a connection with the database could not be established.');
     }
 
     public function setConnection(Connection $connection): static
