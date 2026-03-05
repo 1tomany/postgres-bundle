@@ -17,7 +17,7 @@ This bundle is automatically configured to work with the default Doctrine DBAL c
 ```yaml
 onetomany_postgres:
     advisory_lock_manager:
-        connection: "doctrine.dbal.default_connection"
+        connection: "database_connection"
 
     middleware:
         time_zone: "UTC"
