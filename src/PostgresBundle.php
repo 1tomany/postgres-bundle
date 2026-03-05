@@ -10,8 +10,9 @@ use OneToMany\PostgresBundle\Type\EarthDistance\Earth;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
-use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
+
+use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 class PostgresBundle extends AbstractBundle
 {
@@ -24,7 +25,29 @@ class PostgresBundle extends AbstractBundle
      */
     public function configure(DefinitionConfigurator $definition): void
     {
-        $definition->import('../config/config.php');
+        $definition
+            ->rootNode()
+                ->children()
+                    ->arrayNode('advisory_lock_manager')
+                        ->addDefaultsIfNotSet()
+                        ->children()
+                            ->stringNode('connection')
+                                ->cannotBeEmpty()
+                                ->defaultValue('database_connection')
+                            ->end()
+                        ->end()
+                    ->end()
+                    ->arrayNode('middleware')
+                        ->addDefaultsIfNotSet()
+                        ->children()
+                            ->stringNode('time_zone')
+                                ->cannotBeEmpty()
+                                ->defaultValue('UTC')
+                            ->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end();
     }
 
     /**
@@ -55,7 +78,7 @@ class PostgresBundle extends AbstractBundle
      * @see Symfony\Component\DependencyInjection\Extension\ConfigurableExtensionInterface
      *
      * @param array{
-     *   advisory_lock_manager?: array{
+     *   advisory_lock_manager: array{
      *     connection: non-empty-string,
      *   },
      *   middleware: array{
@@ -65,24 +88,16 @@ class PostgresBundle extends AbstractBundle
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        $container->import('../config/services.php');
+        $container
+            ->services()
+                // Drivers
+                ->set(AdvisoryLockManager::class)
+                    ->arg('$connection', service($config['advisory_lock_manager']['connection']))
 
-        if (isset($config['advisory_lock_manager'])) {
-            $connectionId = $config['advisory_lock_manager']['connection'];
-
-            if ($builder->hasDefinition(AdvisoryLockManager::class)) {
-                $connection = new Reference($connectionId);
-
-                $builder
-                    ->getDefinition(AdvisoryLockManager::class)
-                    ->setArgument('$connection', $connection);
-            }
-        }
-
-        if ($builder->hasDefinition(SetTimeZoneMiddleware::class)) {
-            $builder
-                ->getDefinition(SetTimeZoneMiddleware::class)
-                ->setArgument('$timeZone', $config['middleware']['time_zone']);
-        }
+                // Middlewares
+                ->set(SetTimeZoneMiddleware::class)
+                    ->tag('doctrine.middleware')
+                    ->arg('$timeZone', $config['middleware']['time_zone'])
+        ;
     }
 }

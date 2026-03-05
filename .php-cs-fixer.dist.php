@@ -8,7 +8,6 @@ $finder = new Finder();
 
 $finder->in([
     './',
-    './config/',
     './src/',
     './tests/',
 ]);
@@ -35,11 +34,6 @@ $config->setRules([
     ],
     'phpdoc_align' => [
         'align' => 'left',
-    ],
-    'phpdoc_to_comment' => [
-        'ignored_tags' => [
-            'disregard',
-        ],
     ],
 ]);
 
