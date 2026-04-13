@@ -16,8 +16,6 @@ final readonly class PostgresBackupCommand
     public function __invoke(
         SymfonyStyle $io,
     ): int {
-
-
         // ExecutableFinder
         return Command::SUCCESS;
     }
