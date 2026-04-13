@@ -13,11 +13,13 @@ use Symfony\Component\Process\Process;
 use function array_map;
 use function date;
 use function escapeshellarg;
+use function file_exists;
 use function implode;
 use function is_dir;
 use function is_writable;
 use function realpath;
 use function sprintf;
+use function unlink;
 use function vsprintf;
 
 #[AsCommand(
@@ -40,6 +42,7 @@ final readonly class PostgresBackupCommand
         #[Argument('Postgres database name')] string $dbName,
         #[Argument('Directory to save backup files')] string $backupDir,
         #[Option('Exclude data from these tables')] array $excludeTableData = [],
+        #[Option('Overwrite existing backup file')] bool $overwriteBackupFile = false,
     ): int {
         if (!$pgDumpBinary = new ExecutableFinder()->find('pg_dump')) {
             $io->error('The "pg_dump" binary could not be found.');
@@ -60,6 +63,16 @@ final readonly class PostgresBackupCommand
         }
 
         $filePath = sprintf('%s/%s-%s.sql', $fileDir, $dbName, date('Y-m-d_Hi'));
+
+        if (file_exists($filePath)) {
+            if ($overwriteBackupFile) {
+                unlink($filePath);
+            } else {
+                $io->error(sprintf('The backup file "%s" already exists.', $filePath));
+
+                return Command::FAILURE;
+            }
+        }
 
         $excludeTableDataArguments = array_map(function (string $table): string {
             return sprintf('--exclude-table-data %s', escapeshellarg($table));
