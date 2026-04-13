@@ -14,12 +14,11 @@ final readonly class BackupDatabaseCommand
 {
     public function __invoke(
         SymfonyStyle $io,
-    ): int
-    {
+    ): int {
         return Command::SUCCESS;
     }
 
-    /**
+    /*
      * @see Symfony\Component\Console\Command\Command
      */
     /*
