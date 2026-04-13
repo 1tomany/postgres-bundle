@@ -83,6 +83,6 @@ final class Earth extends Type
             throw new ConversionException(sprintf('Type "%s" requires list of exactly three numeric values.', $this->getName()));
         }
 
-        return sprintf('(%s)', implode(', ', array_values($value)));
+        return sprintf('(%s)', implode(', ', array_values($points)));
     }
 }
