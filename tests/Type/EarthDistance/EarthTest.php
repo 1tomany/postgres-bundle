@@ -43,7 +43,7 @@ final class EarthTest extends TestCase
     }
 
     /**
-     * @return array<array<null|string|array<string>>>
+     * @return array<array<string|array<string>|null>>
      */
     public static function providerDatabaseAndPHPValue(): array
     {
@@ -79,5 +79,4 @@ final class EarthTest extends TestCase
     {
         $this->assertEquals('(1.0, 3.14, 0.577)', new Earth()->convertToDatabaseValue(['1.0', '3.14', '0.577'], $this->createStub(AbstractPlatform::class)));
     }
-
 }

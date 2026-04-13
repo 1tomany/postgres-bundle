@@ -6,6 +6,7 @@ use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
 
+use function array_filter;
 use function array_map;
 use function array_values;
 use function count;
@@ -79,7 +80,7 @@ final class Earth extends Type
         //     throw new InvalidArgumentException(sprintf('Type "%s" requires a list of exactly three elements.', $this->getName()));
         // }
 
-        $points = \array_filter($value, 'is_numeric');
+        $points = array_filter($value, 'is_numeric');
 
         if (3 !== count($points)) {
             throw new InvalidArgumentException(sprintf('Type "%s" requires a list of exactly three numeric elements.', $this->getName()));
