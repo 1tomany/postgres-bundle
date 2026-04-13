@@ -2,6 +2,7 @@
 
 namespace OneToMany\PostgresBundle;
 
+use OneToMany\PostgresBundle\Command\PostgresBackupCommand;
 use OneToMany\PostgresBundle\Driver\AdvisoryLockManager;
 use OneToMany\PostgresBundle\Function\EarthDistance\Boundary;
 use OneToMany\PostgresBundle\Function\EarthDistance\Distance;
@@ -90,6 +91,10 @@ class PostgresBundle extends AbstractBundle
     {
         $container
             ->services()
+                // Commands
+                ->set(PostgresBackupCommand::class)
+                    ->tag('console.command')
+
                 // Drivers
                 ->set(AdvisoryLockManager::class)
                     ->arg('$connection', service($config['advisory_lock_manager']['connection']))

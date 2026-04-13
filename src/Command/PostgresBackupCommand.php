@@ -7,10 +7,10 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'onetomany:postgres:backup-database',
+    name: 'onetomany:postgres:backup',
     description: 'backups a database',
 )]
-final readonly class BackupDatabaseCommand
+final readonly class PostgresBackupCommand
 {
     public function __invoke(
         SymfonyStyle $io,
