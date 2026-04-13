@@ -37,7 +37,7 @@ final class EarthTest extends TestCase
      * @param ?array<string> $phpValue
      */
     #[DataProvider('providerDatabaseAndPHPValue')]
-    public function testConvertingToPHPValue(mixed $databaseValue, ?array $phpValue): void
+    public function testConvertingToPHPValue(?string $databaseValue, ?array $phpValue): void
     {
         $this->assertSame($phpValue, new Earth()->convertToPHPValue($databaseValue, $this->createStub(AbstractPlatform::class)));
     }
@@ -57,14 +57,6 @@ final class EarthTest extends TestCase
         ];
 
         return $provider;
-    }
-
-    public function _testConvertingToDatabaseValueRequiresArrayOfThreeElements(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Type "earth" requires list of exactly three elements.');
-
-        new Earth()->convertToDatabaseValue(['1.0'], $this->createStub(AbstractPlatform::class));
     }
 
     public function testConvertingToDatabaseValueRequiresArrayOfNumericElements(): void
