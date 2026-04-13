@@ -76,10 +76,6 @@ final class Earth extends Type
             return null;
         }
 
-        // if (3 !== count($value)) {
-        //     throw new InvalidArgumentException(sprintf('Type "%s" requires a list of exactly three elements.', $this->getName()));
-        // }
-
         $points = array_filter($value, 'is_numeric');
 
         if (3 !== count($points)) {
