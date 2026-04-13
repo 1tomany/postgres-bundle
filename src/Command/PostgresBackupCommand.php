@@ -4,7 +4,6 @@ namespace OneToMany\PostgresBundle\Command;
 
 use OneToMany\PostgresBundle\Contract\Exception\ExceptionInterface as PostgresExceptionInterface;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
-use OneToMany\PostgresBundle\Exception\RuntimeException;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -18,13 +17,11 @@ use Symfony\Component\Process\Process;
 use function array_map;
 use function date;
 use function escapeshellarg;
-use function file_exists;
 use function implode;
 use function is_dir;
 use function is_writable;
 use function realpath;
 use function sprintf;
-use function unlink;
 use function vsprintf;
 
 #[AsCommand(
@@ -88,16 +85,19 @@ final readonly class PostgresBackupCommand
             return sprintf('--exclude-table-data %s', escapeshellarg($table));
         }, $excludeTableData);
 
-        $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host="${:DB_HOST}" --username="${:DB_USER}" --dbname="${:DB_NAME}" --file="${:FILE_PATH}" %s', [
-            $pgDumpBinary, implode(' ', $excludeTableDataArguments),
+        $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host=%s --username=%s --dbname=%s --file=%s %s', [
+            $pgDumpBinary,
+            escapeshellarg($dbHost),
+            escapeshellarg($dbUser),
+            escapeshellarg($dbName),
+            escapeshellarg($filePath),
+            implode(' ', $excludeTableDataArguments),
         ]);
 
-        Process::fromShellCommandline($pgDumpCommand)->mustRun(null, [
-            'DB_HOST' => $dbHost,
-            'DB_USER' => $dbUser,
-            'DB_NAME' => $dbName,
-            'FILE_PATH' => $filePath,
-        ]);
+        // Generate the
+        Process::fromShellCommandline($pgDumpCommand)->mustRun();
+
+        new Process(['gzip', '-f', $filePath])->mustRun();
 
         return Command::SUCCESS;
     }
