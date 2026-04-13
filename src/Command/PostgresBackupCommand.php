@@ -97,7 +97,11 @@ final readonly class PostgresBackupCommand
         // Generate the
         Process::fromShellCommandline($pgDumpCommand)->mustRun();
 
-        new Process(['gzip', '-f', $filePath])->mustRun();
+        $gzipCommand = vsprintf('gzip -f %s', [
+            escapeshellarg($filePath),
+        ]);
+
+        Process::fromShellCommandline($gzipCommand)->mustRun();
 
         return Command::SUCCESS;
     }
