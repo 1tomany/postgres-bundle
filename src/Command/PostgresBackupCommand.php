@@ -10,6 +10,16 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
+use function array_map;
+use function date;
+use function escapeshellarg;
+use function implode;
+use function is_dir;
+use function is_writable;
+use function realpath;
+use function sprintf;
+use function vsprintf;
+
 #[AsCommand(
     name: 'onetomany:postgres:backup',
     description: 'backups a database',
@@ -37,26 +47,26 @@ final readonly class PostgresBackupCommand
             return Command::FAILURE;
         }
 
-        if (!$fileDir = \realpath($backupDir)) {
-            $io->error(\sprintf('The backup directory "%s" does not exist.', $backupDir));
+        if (!$fileDir = realpath($backupDir)) {
+            $io->error(sprintf('The backup directory "%s" does not exist.', $backupDir));
 
             return Command::FAILURE;
         }
 
-        if (!\is_dir($fileDir) || !\is_writable($fileDir)) {
-            $io->error(\sprintf("The backup directory \"%s\" is not writable.\n", $fileDir));
+        if (!is_dir($fileDir) || !is_writable($fileDir)) {
+            $io->error(sprintf("The backup directory \"%s\" is not writable.\n", $fileDir));
 
             return Command::FAILURE;
         }
 
-        $filePath = \sprintf('%s/%s-%s.sql', $fileDir, $dbName, \date('Y-m-d_Hi'));
+        $filePath = sprintf('%s/%s-%s.sql', $fileDir, $dbName, date('Y-m-d_Hi'));
 
-        $excludeTableDataArguments = \array_map(function (string $table): string {
-            return \sprintf('--exclude-table-data %s', \escapeshellarg($table));
+        $excludeTableDataArguments = array_map(function (string $table): string {
+            return sprintf('--exclude-table-data %s', escapeshellarg($table));
         }, $excludeTableData);
 
-        $pgDumpCommand = \vsprintf('%s --no-acl --no-owner --host="${:DB_HOST}" --username="${:DB_USER}" --dbname="${:DB_NAME}" --file="${:FILE_PATH}" %s', [
-            $pgDumpBinary, \implode(' ', $excludeTableDataArguments),
+        $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host="${:DB_HOST}" --username="${:DB_USER}" --dbname="${:DB_NAME}" --file="${:FILE_PATH}" %s', [
+            $pgDumpBinary, implode(' ', $excludeTableDataArguments),
         ]);
 
         $process = Process::fromShellCommandline($pgDumpCommand);
