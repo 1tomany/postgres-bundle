@@ -2,11 +2,16 @@
 
 namespace OneToMany\PostgresBundle\Command;
 
+use OneToMany\PostgresBundle\Contract\Exception\ExceptionInterface as PostgresExceptionInterface;
+use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
+use OneToMany\PostgresBundle\Exception\RuntimeException;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Filesystem\Exception\ExceptionInterface as FilesystemExceptionInterface;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
@@ -28,6 +33,13 @@ use function vsprintf;
 )]
 final readonly class PostgresBackupCommand
 {
+    private Filesystem $filesystem;
+
+    public function __construct()
+    {
+        $this->filesystem = new Filesystem();
+    }
+
     /**
      * @param non-empty-string $dbHost
      * @param non-empty-string $dbUser
@@ -44,34 +56,32 @@ final readonly class PostgresBackupCommand
         #[Option('Exclude data from these tables')] array $excludeTableData = [],
         #[Option('Overwrite existing backup file')] bool $overwriteBackupFile = false,
     ): int {
-        if (!$pgDumpBinary = new ExecutableFinder()->find('pg_dump')) {
-            $io->error('The "pg_dump" binary could not be found.');
-
-            return Command::FAILURE;
-        }
-
-        if (!$fileDir = realpath($backupDir)) {
-            $io->error(sprintf('The backup directory "%s" does not exist.', $backupDir));
-
-            return Command::FAILURE;
-        }
-
-        if (!is_dir($fileDir) || !is_writable($fileDir)) {
-            $io->error(sprintf("The backup directory \"%s\" is not writable.\n", $fileDir));
-
-            return Command::FAILURE;
-        }
-
-        $filePath = sprintf('%s/%s-%s.sql', $fileDir, $dbName, date('Y-m-d_Hi'));
-
-        if (file_exists($filePath)) {
-            if ($overwriteBackupFile) {
-                unlink($filePath);
-            } else {
-                $io->error(sprintf('The backup file "%s" already exists.', $filePath));
-
-                return Command::FAILURE;
+        try {
+            if (!$pgDumpBinary = new ExecutableFinder()->find('pg_dump')) {
+                throw new InvalidArgumentException('The "pg_dump" binary could not be found.');
             }
+
+            if (!$fileDir = realpath($backupDir)) {
+                throw new InvalidArgumentException(sprintf('The backup directory "%s" does not exist.', $backupDir));
+            }
+
+            if (!is_dir($fileDir) || !is_writable($fileDir)) {
+                throw new InvalidArgumentException(sprintf('The backup directory "%s" is not writable.', $fileDir));
+            }
+
+            $filePath = sprintf('%s/%s-%s.sql', $fileDir, $dbName, date('Y-m-d_Hi'));
+
+            if ($this->filesystem->exists($filePath)) {
+                if ($overwriteBackupFile) {
+                    $this->filesystem->remove($filePath);
+                } else {
+                    throw new InvalidArgumentException(sprintf('The backup file "%s" already exists.', $filePath));
+                }
+            }
+        } catch (PostgresExceptionInterface|FilesystemExceptionInterface $e) {
+            $io->error($e->getMessage());
+
+            return Command::FAILURE;
         }
 
         $excludeTableDataArguments = array_map(function (string $table): string {
@@ -82,9 +92,7 @@ final readonly class PostgresBackupCommand
             $pgDumpBinary, implode(' ', $excludeTableDataArguments),
         ]);
 
-        $process = Process::fromShellCommandline($pgDumpCommand);
-
-        $process->mustRun(null, [
+        Process::fromShellCommandline($pgDumpCommand)->mustRun(null, [
             'DB_HOST' => $dbHost,
             'DB_USER' => $dbUser,
             'DB_NAME' => $dbName,
