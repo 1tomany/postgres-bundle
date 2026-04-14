@@ -15,8 +15,7 @@ final class BackupRegistry
      */
     public function __construct(
         private array $configs = [],
-    )
-    {
+    ) {
     }
 
     /**
