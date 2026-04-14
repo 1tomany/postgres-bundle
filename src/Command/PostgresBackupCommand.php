@@ -2,6 +2,7 @@
 
 namespace OneToMany\PostgresBundle\Command;
 
+use Doctrine\DBAL\Driver;
 use OneToMany\PostgresBundle\Backup\BackupRegistry;
 use OneToMany\PostgresBundle\Contract\Exception\ExceptionInterface as PostgresExceptionInterface;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
@@ -12,6 +13,7 @@ use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Exception\ExceptionInterface as FilesystemExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Path;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 
@@ -19,9 +21,6 @@ use function array_map;
 use function date;
 use function escapeshellarg;
 use function implode;
-use function is_dir;
-use function is_writable;
-use function realpath;
 use function sprintf;
 use function trim;
 use function vsprintf;
@@ -57,21 +56,26 @@ final class PostgresBackupCommand
                 throw new InvalidArgumentException(sprintf('The "%s" binary could not be found.', $config->binary));
             }
 
-            if (!$fileDir = realpath($config->directory)) {
+            if (!$backupDir = Path::canonicalize($config->directory)) {
                 throw new InvalidArgumentException(sprintf('The backup directory "%s" does not exist.', $config->directory));
             }
 
-            if (!is_dir($fileDir) || !is_writable($fileDir)) {
-                throw new InvalidArgumentException(sprintf('The backup directory "%s" is not writable.', $fileDir));
+            try {
+                $filesystem->mkdir($backupDir);
+            } catch (FilesystemExceptionInterface $e) {
+                throw new InvalidArgumentException(sprintf('The backup directory "%s" is not writable.', $backupDir), previous: $e);
             }
 
-            $params = $config->connection->getParams();
-            $this->validateConnectionParameters($params);
+            $connectionParameters = $config->connection->getParams();
 
-            $filePath = sprintf('%s/%s-%s.sql', $fileDir, $params['dbname'], date('Y-m-d_Hi'));
+            $this->validateConnectionParameters(...[
+                'params' => $connectionParameters,
+            ]);
 
-            if ($filesystem->exists($filePath)) {
-                $filesystem->remove($filePath);
+            $backupFile = sprintf('%s/%s-%s.sql', $backupDir, $connectionParameters['dbname'], date('Y-m-d_Hi'));
+
+            if ($filesystem->exists($backupFile)) {
+                $filesystem->remove($backupFile);
             }
         } catch (PostgresExceptionInterface|FilesystemExceptionInterface $e) {
             $io->error($e->getMessage());
@@ -91,15 +95,15 @@ final class PostgresBackupCommand
         ]);
 
         Process::fromShellCommandline(trim($pgDumpCommand), timeout: 3600)->mustRun(null, [
-            'DB_HOST' => $params['host'],
-            'DB_USER' => $params['user'],
-            'DB_NAME' => $params['dbname'],
-            'FILE_PATH' => $filePath,
+            'DB_HOST' => $connectionParameters['host'],
+            'DB_USER' => $connectionParameters['user'],
+            'DB_NAME' => $connectionParameters['dbname'],
+            'FILE_PATH' => $backupFile,
         ]);
 
         // Compress the database backup
         Process::fromShellCommandline('gzip -f "${:FILE_PATH}"', timeout: 900)->mustRun(null, [
-            'FILE_PATH' => $filePath,
+            'FILE_PATH' => $backupFile,
         ]);
 
         $this->release();
@@ -108,17 +112,25 @@ final class PostgresBackupCommand
     }
 
     /**
-     * @phpstan-assert array{host: non-empty-string, user: non-empty-string, dbname: non-empty-string} $params
+     * @phpstan-assert array{
+     *   host: non-empty-string,
+     *   user: non-empty-string,
+     *   dbname: non-empty-string,
+     * } $params
      *
-     * @param array{host?: ?string, user?: ?string, dbname?: ?string} $params
+     * @param array{
+     *   host?: ?string,
+     *   user?: ?string,
+     *   dbname?: ?string,
+     * } $params
      *
      * @throws InvalidArgumentException if any required parameter is missing or empty
      */
     private function validateConnectionParameters(array $params): void
     {
-        foreach (['host', 'user', 'dbname'] as $requiredParam) {
-            if (!isset($params[$requiredParam]) || empty($params[$requiredParam])) {
-                throw new InvalidArgumentException(sprintf('The connection for backup "%s" is missing one or more required parameters (host, user, dbname).', $requiredParam));
+        foreach (['host', 'user', 'dbname'] as $param) {
+            if (!isset($params[$param]) || empty($params[$param])) {
+                throw new InvalidArgumentException(sprintf('The connection parameter "%s" is missing or empty.', $param));
             }
         }
     }
