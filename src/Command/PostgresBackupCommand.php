@@ -53,7 +53,7 @@ final class PostgresBackupCommand
         try {
             $config = $this->registry->get($name);
 
-            if (!$binary = new ExecutableFinder()->find($config->binary)) {
+            if (!$pgDumpBinary = new ExecutableFinder()->find($config->binary)) {
                 throw new InvalidArgumentException(sprintf('The "%s" binary could not be found.', $config->binary));
             }
 
@@ -92,7 +92,7 @@ final class PostgresBackupCommand
 
         // Dump the Postgres database
         $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host=%s --username=%s --dbname=%s --file=%s %s', [
-            $binary,
+            $pgDumpBinary,
             escapeshellarg($params['host']),
             escapeshellarg($params['user']),
             escapeshellarg($params['dbname']),
@@ -100,7 +100,12 @@ final class PostgresBackupCommand
             $excludeTableArguments,
         ]);
 
-        Process::fromShellCommandline(trim($pgDumpCommand), timeout: 3600)->mustRun();
+        Process::fromShellCommandline(trim($pgDumpCommand), timeout: 3600)->mustRun(null, [
+            'DB_HOST' => $params['host'],
+            'DB_USER' => $params['user'],
+            'DB_NAME' => $params['dbname'],
+            'FILE_PATH' => $filePath,
+        ]);
 
         // Compress the database backup
         $gzipCommand = vsprintf('gzip -f %s', [
