@@ -2,6 +2,8 @@
 
 namespace OneToMany\PostgresBundle;
 
+use OneToMany\PostgresBundle\Backup\BackupConfig;
+use OneToMany\PostgresBundle\Backup\BackupRegistry;
 use OneToMany\PostgresBundle\Command\PostgresBackupCommand;
 use OneToMany\PostgresBundle\Driver\AdvisoryLockManager;
 use OneToMany\PostgresBundle\Function\EarthDistance\Boundary;
@@ -35,6 +37,32 @@ class PostgresBundle extends AbstractBundle
                             ->stringNode('connection')
                                 ->cannotBeEmpty()
                                 ->defaultValue('database_connection')
+                            ->end()
+                        ->end()
+                    ->end()
+                    ->arrayNode('backups')
+                        ->useAttributeAsKey('name')
+                        ->arrayPrototype()
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->stringNode('binary')
+                                    ->cannotBeEmpty()
+                                    ->defaultValue('pg_dump')
+                                ->end()
+                                ->stringNode('connection')
+                                    ->cannotBeEmpty()
+                                    ->defaultValue('database_connection')
+                                ->end()
+                                ->stringNode('directory')
+                                    ->cannotBeEmpty()
+                                    ->defaultValue('%kernel.share_dir%/postgres/backups')
+                                ->end()
+                                ->arrayNode('exclude_tables')
+                                    ->stringPrototype()
+                                        ->cannotBeEmpty()
+                                    ->end()
+                                    ->defaultValue([])
+                                ->end()
                             ->end()
                         ->end()
                     ->end()
@@ -82,6 +110,12 @@ class PostgresBundle extends AbstractBundle
      *   advisory_lock_manager: array{
      *     connection: non-empty-string,
      *   },
+     *   backups: array<non-empty-string, array{
+     *     binary: non-empty-string,
+     *     connection: non-empty-string,
+     *     directory: non-empty-string,
+     *     exclude_tables: list<non-empty-string>,
+     *   }>,
      *   middleware: array{
      *     time_zone: non-empty-string,
      *   },
@@ -89,20 +123,44 @@ class PostgresBundle extends AbstractBundle
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        $container
-            ->services()
-                // Commands
-                ->set(PostgresBackupCommand::class)
-                    ->tag('console.command')
+        $services = $container->services();
 
-                // Drivers
-                ->set(AdvisoryLockManager::class)
-                    ->arg('$connection', service($config['advisory_lock_manager']['connection']))
+        $services
+            // Drivers
+            ->set(AdvisoryLockManager::class)
+                ->arg('$connection', service($config['advisory_lock_manager']['connection']))
 
-                // Middlewares
-                ->set(SetTimeZoneMiddleware::class)
-                    ->tag('doctrine.middleware')
-                    ->arg('$timeZone', $config['middleware']['time_zone'])
+            // Middlewares
+            ->set(SetTimeZoneMiddleware::class)
+                ->tag('doctrine.middleware')
+                ->arg('$timeZone', $config['middleware']['time_zone'])
+        ;
+
+        $backupConfigReferences = [];
+
+        foreach ($config['backups'] as $name => $backup) {
+            $serviceId = sprintf('onetomany_postgres.backup_config.%s', $name);
+
+            $services
+                ->set($serviceId, BackupConfig::class)
+                    ->arg('$name', $name)
+                    ->arg('$binary', $backup['binary'])
+                    ->arg('$connection', service($backup['connection']))
+                    ->arg('$directory', $backup['directory'])
+                    ->arg('$excludeTables', $backup['exclude_tables'])
+            ;
+
+            $backupConfigReferences[$name] = service($serviceId);
+        }
+
+        $services
+            ->set(BackupRegistry::class)
+                ->arg('$configs', $backupConfigReferences)
+
+            // Commands
+            ->set(PostgresBackupCommand::class)
+                ->tag('console.command')
+                ->arg('$registry', service(BackupRegistry::class))
         ;
     }
 }

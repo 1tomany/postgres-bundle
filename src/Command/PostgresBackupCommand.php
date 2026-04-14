@@ -2,11 +2,11 @@
 
 namespace OneToMany\PostgresBundle\Command;
 
+use OneToMany\PostgresBundle\Backup\BackupRegistry;
 use OneToMany\PostgresBundle\Contract\Exception\ExceptionInterface as PostgresExceptionInterface;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
-use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -28,32 +28,21 @@ use function vsprintf;
 
 #[AsCommand(
     name: 'onetomany:postgres:backup',
-    description: 'backups a database',
+    description: 'Creates a database backup using a named backup configuration',
 )]
 final class PostgresBackupCommand
 {
     use LockableTrait;
 
-    public function __construct()
+    public function __construct(private readonly BackupRegistry $registry)
     {
     }
 
-    /**
-     * @param non-empty-string $dbHost
-     * @param non-empty-string $dbUser
-     * @param non-empty-string $dbName
-     * @param non-empty-string $backupDir
-     * @param list<non-empty-string> $excludeTableData
-     */
     public function __invoke(
         SymfonyStyle $io,
-        #[Argument('Postgres server hostname')] string $dbHost,
-        #[Argument('Postgres server username')] string $dbUser,
-        #[Argument('Postgres database name')] string $dbName,
-        #[Argument('Directory to save the backup file to')] string $backupDir,
-        #[Option('Exclude data from these tables')] array $excludeTableData = [],
+        #[Argument('Name of the backup configuration to run')] string $name,
     ): int {
-        if (!$this->lock()) {
+        if (!$this->lock(sprintf('onetomany_postgres_backup:%s', $name))) {
             $io->writeln('This command is already running in another process.');
 
             return Command::SUCCESS;
@@ -62,16 +51,28 @@ final class PostgresBackupCommand
         $filesystem = new Filesystem();
 
         try {
-            if (!$pgDumpBinary = new ExecutableFinder()->find('pg_dump')) {
-                throw new InvalidArgumentException('The "pg_dump" binary could not be found.');
+            $config = $this->registry->get($name);
+
+            if (!$binary = new ExecutableFinder()->find($config->binary)) {
+                throw new InvalidArgumentException(sprintf('The "%s" binary could not be found.', $config->binary));
             }
 
-            if (!$fileDir = realpath($backupDir)) {
-                throw new InvalidArgumentException(sprintf('The backup directory "%s" does not exist.', $backupDir));
+            if (!$fileDir = realpath($config->directory)) {
+                throw new InvalidArgumentException(sprintf('The backup directory "%s" does not exist.', $config->directory));
             }
 
             if (!is_dir($fileDir) || !is_writable($fileDir)) {
                 throw new InvalidArgumentException(sprintf('The backup directory "%s" is not writable.', $fileDir));
+            }
+
+            $params = $config->connection->getParams();
+
+            $dbHost = $params['host'] ?? null;
+            $dbUser = $params['user'] ?? null;
+            $dbName = $params['dbname'] ?? null;
+
+            if (!$dbHost || !$dbUser || !$dbName) {
+                throw new InvalidArgumentException(sprintf('The connection for backup "%s" is missing one or more required parameters (host, user, dbname).', $name));
             }
 
             $filePath = sprintf('%s/%s-%s.sql', $fileDir, $dbName, date('Y-m-d_Hi'));
@@ -85,20 +86,20 @@ final class PostgresBackupCommand
             return Command::FAILURE;
         }
 
-        $excludeTableDataArguments = array_map(function (string $table): string {
+        $excludeTableArguments = array_map(function (string $table): string {
             return sprintf('--exclude-table-data %s', escapeshellarg($table));
-        }, $excludeTableData);
+        }, $config->excludeTables);
 
-        $excludeTableDataArguments = implode(' ', $excludeTableDataArguments);
+        $excludeTableArguments = implode(' ', $excludeTableArguments);
 
         // Dump the Postgres database
         $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host=%s --username=%s --dbname=%s --file=%s %s', [
-            $pgDumpBinary,
+            $binary,
             escapeshellarg($dbHost),
             escapeshellarg($dbUser),
             escapeshellarg($dbName),
             escapeshellarg($filePath),
-            $excludeTableDataArguments,
+            $excludeTableArguments,
         ]);
 
         Process::fromShellCommandline(trim($pgDumpCommand), timeout: 3600)->mustRun();
