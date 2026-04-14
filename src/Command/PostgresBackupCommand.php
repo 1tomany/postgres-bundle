@@ -2,7 +2,6 @@
 
 namespace OneToMany\PostgresBundle\Command;
 
-use Doctrine\DBAL\Driver;
 use OneToMany\PostgresBundle\Backup\BackupRegistry;
 use OneToMany\PostgresBundle\Contract\Exception\ExceptionInterface as PostgresExceptionInterface;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
@@ -66,13 +65,13 @@ final class PostgresBackupCommand
                 throw new InvalidArgumentException(sprintf('The backup directory "%s" is not writable.', $backupDir), previous: $e);
             }
 
-            $connectionParameters = $config->connection->getParams();
+            $params = $config->connection->getParams();
 
             $this->validateConnectionParameters(...[
-                'params' => $connectionParameters,
+                'params' => $params,
             ]);
 
-            $backupFile = sprintf('%s/%s-%s.sql', $backupDir, $connectionParameters['dbname'], date('Y-m-d_Hi'));
+            $backupFile = sprintf('%s/%s-%s.sql', $backupDir, $params['dbname'], date('Y-m-d_Hi'));
 
             if ($filesystem->exists($backupFile)) {
                 $filesystem->remove($backupFile);
@@ -95,9 +94,9 @@ final class PostgresBackupCommand
         ]);
 
         Process::fromShellCommandline(trim($pgDumpCommand), timeout: 3600)->mustRun(null, [
-            'DB_HOST' => $connectionParameters['host'],
-            'DB_USER' => $connectionParameters['user'],
-            'DB_NAME' => $connectionParameters['dbname'],
+            'DB_HOST' => $params['host'],
+            'DB_USER' => $params['user'],
+            'DB_NAME' => $params['dbname'],
             'FILE_PATH' => $backupFile,
         ]);
 
