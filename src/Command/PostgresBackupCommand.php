@@ -22,6 +22,7 @@ use function is_dir;
 use function is_writable;
 use function realpath;
 use function sprintf;
+use function trim;
 use function vsprintf;
 
 #[AsCommand(
@@ -51,7 +52,6 @@ final readonly class PostgresBackupCommand
         #[Argument('Postgres database name')] string $dbName,
         #[Argument('Directory to save backup files')] string $backupDir,
         #[Option('Exclude data from these tables')] array $excludeTableData = [],
-        #[Option('Overwrite existing backup file')] bool $overwriteBackupFile = false,
     ): int {
         try {
             if (!$pgDumpBinary = new ExecutableFinder()->find('pg_dump')) {
@@ -69,11 +69,7 @@ final readonly class PostgresBackupCommand
             $filePath = sprintf('%s/%s-%s.sql', $fileDir, $dbName, date('Y-m-d_Hi'));
 
             if ($this->filesystem->exists($filePath)) {
-                if ($overwriteBackupFile) {
-                    $this->filesystem->remove($filePath);
-                } else {
-                    throw new InvalidArgumentException(sprintf('The backup file "%s" already exists.', $filePath));
-                }
+                $this->filesystem->remove($filePath);
             }
         } catch (PostgresExceptionInterface|FilesystemExceptionInterface $e) {
             $io->error($e->getMessage());
@@ -85,18 +81,21 @@ final readonly class PostgresBackupCommand
             return sprintf('--exclude-table-data %s', escapeshellarg($table));
         }, $excludeTableData);
 
+        $excludeTableDataArguments = implode(' ', $excludeTableDataArguments);
+
+        // Dump the Postgres database
         $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host=%s --username=%s --dbname=%s --file=%s %s', [
             $pgDumpBinary,
             escapeshellarg($dbHost),
             escapeshellarg($dbUser),
             escapeshellarg($dbName),
             escapeshellarg($filePath),
-            implode(' ', $excludeTableDataArguments),
+            $excludeTableDataArguments,
         ]);
 
-        // Generate the
-        Process::fromShellCommandline($pgDumpCommand)->mustRun();
+        Process::fromShellCommandline(trim($pgDumpCommand))->mustRun();
 
+        // Compress the database backup
         $gzipCommand = vsprintf('gzip -f %s', [
             escapeshellarg($filePath),
         ]);
