@@ -65,11 +65,12 @@ final class PostgresBackupCommand
                 throw new InvalidArgumentException(sprintf('The backup directory "%s" is not writable.', $backupDir), previous: $e);
             }
 
+            // Validate the database parameters
             $params = $config->connection->getParams();
-
             $this->validateConnectionParameters($params);
 
-            $backupFile = sprintf('%s/%s-%s.sql', $backupDir, $params['dbname'], date('Y-m-d_Hi'));
+            /** @var non-empty-string $backupFile */
+            $backupFile = Path::join($backupDir, sprintf('%s-%s.sql', $params['dbname'], date('Y-m-d_Hi')));
 
             if ($filesystem->exists($backupFile)) {
                 $filesystem->remove($backupFile);
