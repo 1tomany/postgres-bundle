@@ -50,7 +50,7 @@ final readonly class PostgresBackupCommand
         #[Argument('Postgres server hostname')] string $dbHost,
         #[Argument('Postgres server username')] string $dbUser,
         #[Argument('Postgres database name')] string $dbName,
-        #[Argument('Directory to save backup files')] string $backupDir,
+        #[Argument('Directory to save the backup file to')] string $backupDir,
         #[Option('Exclude data from these tables')] array $excludeTableData = [],
     ): int {
         try {
