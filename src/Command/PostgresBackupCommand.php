@@ -8,6 +8,7 @@ use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Command\LockableTrait;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Exception\ExceptionInterface as FilesystemExceptionInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -29,13 +30,12 @@ use function vsprintf;
     name: 'onetomany:postgres:backup',
     description: 'backups a database',
 )]
-final readonly class PostgresBackupCommand
+final class PostgresBackupCommand
 {
-    private Filesystem $filesystem;
+    use LockableTrait;
 
     public function __construct()
     {
-        $this->filesystem = new Filesystem();
     }
 
     /**
@@ -53,6 +53,14 @@ final readonly class PostgresBackupCommand
         #[Argument('Directory to save the backup file to')] string $backupDir,
         #[Option('Exclude data from these tables')] array $excludeTableData = [],
     ): int {
+        if (!$this->lock()) {
+            $io->writeln('This command is already running in another process.');
+
+            return Command::SUCCESS;
+        }
+
+        $filesystem = new Filesystem();
+
         try {
             if (!$pgDumpBinary = new ExecutableFinder()->find('pg_dump')) {
                 throw new InvalidArgumentException('The "pg_dump" binary could not be found.');
@@ -68,8 +76,8 @@ final readonly class PostgresBackupCommand
 
             $filePath = sprintf('%s/%s-%s.sql', $fileDir, $dbName, date('Y-m-d_Hi'));
 
-            if ($this->filesystem->exists($filePath)) {
-                $this->filesystem->remove($filePath);
+            if ($filesystem->exists($filePath)) {
+                $filesystem->remove($filePath);
             }
         } catch (PostgresExceptionInterface|FilesystemExceptionInterface $e) {
             $io->error($e->getMessage());
