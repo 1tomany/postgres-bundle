@@ -67,9 +67,7 @@ final class PostgresBackupCommand
 
             $params = $config->connection->getParams();
 
-            $this->validateConnectionParameters(...[
-                'params' => $params,
-            ]);
+            $this->validateConnectionParameters($params);
 
             $backupFile = sprintf('%s/%s-%s.sql', $backupDir, $params['dbname'], date('Y-m-d_Hi'));
 
@@ -111,11 +109,7 @@ final class PostgresBackupCommand
     }
 
     /**
-     * @phpstan-assert array{
-     *   host: non-empty-string,
-     *   user: non-empty-string,
-     *   dbname: non-empty-string,
-     * } $params
+     * @phpstan-assert array{host: non-empty-string, user: non-empty-string, dbname: non-empty-string} $params
      *
      * @param array{
      *   host?: ?string,
@@ -123,7 +117,7 @@ final class PostgresBackupCommand
      *   dbname?: ?string,
      * } $params
      *
-     * @throws InvalidArgumentException if any required parameter is missing or empty
+     * @throws InvalidArgumentException if any parameter is missing or empty
      */
     private function validateConnectionParameters(array $params): void
     {
