@@ -101,14 +101,16 @@ final class PostgresBackupCommand
             $excludeTableDataArguments,
         ]);
 
-        Process::fromShellCommandline(trim($pgDumpCommand))->mustRun();
+        Process::fromShellCommandline(trim($pgDumpCommand), timeout: 3600)->mustRun();
 
         // Compress the database backup
         $gzipCommand = vsprintf('gzip -f %s', [
             escapeshellarg($filePath),
         ]);
 
-        Process::fromShellCommandline($gzipCommand)->mustRun();
+        Process::fromShellCommandline($gzipCommand, timeout: 900)->mustRun();
+
+        $this->release();
 
         return Command::SUCCESS;
     }
