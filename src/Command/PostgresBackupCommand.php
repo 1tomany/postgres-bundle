@@ -91,13 +91,8 @@ final class PostgresBackupCommand
         $excludeTableArguments = implode(' ', $excludeTableArguments);
 
         // Dump the Postgres database
-        $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host=%s --username=%s --dbname=%s --file=%s %s', [
-            $pgDumpBinary,
-            escapeshellarg($params['host']),
-            escapeshellarg($params['user']),
-            escapeshellarg($params['dbname']),
-            escapeshellarg($filePath),
-            $excludeTableArguments,
+        $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host="${:DB_HOST}" --username="${:DB_USER}" --dbname="${:DB_NAME}" --file="${:FILE_PATH}" %s', [
+            $pgDumpBinary, $excludeTableArguments,
         ]);
 
         Process::fromShellCommandline(trim($pgDumpCommand), timeout: 3600)->mustRun(null, [
@@ -108,11 +103,9 @@ final class PostgresBackupCommand
         ]);
 
         // Compress the database backup
-        $gzipCommand = vsprintf('gzip -f %s', [
-            escapeshellarg($filePath),
+        Process::fromShellCommandline('gzip -f "${:FILE_PATH}"', timeout: 900)->mustRun(null, [
+            'FILE_PATH' => $filePath,
         ]);
-
-        Process::fromShellCommandline($gzipCommand, timeout: 900)->mustRun();
 
         $this->release();
 
