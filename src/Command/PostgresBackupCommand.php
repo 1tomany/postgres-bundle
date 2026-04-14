@@ -66,12 +66,7 @@ final class PostgresBackupCommand
             }
 
             $params = $config->connection->getParams();
-
-            foreach (['host', 'user', 'dbname'] as $requiredParam) {
-                if (!isset($params[$requiredParam]) || empty($params[$requiredParam])) {
-                    throw new InvalidArgumentException(sprintf('The connection for backup "%s" is missing one or more required parameters (host, user, dbname).', $name));
-                }
-            }
+            $this->validateConnectionParameters($params);
 
             $filePath = sprintf('%s/%s-%s.sql', $fileDir, $params['dbname'], date('Y-m-d_Hi'));
 
@@ -110,5 +105,21 @@ final class PostgresBackupCommand
         $this->release();
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * @phpstan-assert array{host: non-empty-string, user: non-empty-string, dbname: non-empty-string} $params
+     *
+     * @param array{host?: ?string, user?: ?string, dbname?: ?string} $params
+     *
+     * @throws InvalidArgumentException if any required parameter is missing or empty
+     */
+    private function validateConnectionParameters(array $params): void
+    {
+        foreach (['host', 'user', 'dbname'] as $requiredParam) {
+            if (!isset($params[$requiredParam]) || empty($params[$requiredParam])) {
+                throw new InvalidArgumentException(sprintf('The connection for backup "%s" is missing one or more required parameters (host, user, dbname).', $requiredParam));
+            }
+        }
     }
 }
