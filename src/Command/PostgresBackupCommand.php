@@ -67,15 +67,13 @@ final class PostgresBackupCommand
 
             $params = $config->connection->getParams();
 
-            $dbHost = $params['host'] ?? null;
-            $dbUser = $params['user'] ?? null;
-            $dbName = $params['dbname'] ?? null;
-
-            if (!$dbHost || !$dbUser || !$dbName) {
-                throw new InvalidArgumentException(sprintf('The connection for backup "%s" is missing one or more required parameters (host, user, dbname).', $name));
+            foreach (['host', 'user', 'dbname'] as $requiredParam) {
+                if (!isset($params[$requiredParam]) || empty($params[$requiredParam])) {
+                    throw new InvalidArgumentException(sprintf('The connection for backup "%s" is missing one or more required parameters (host, user, dbname).', $name));
+                }
             }
 
-            $filePath = sprintf('%s/%s-%s.sql', $fileDir, $dbName, date('Y-m-d_Hi'));
+            $filePath = sprintf('%s/%s-%s.sql', $fileDir, $params['dbname'], date('Y-m-d_Hi'));
 
             if ($filesystem->exists($filePath)) {
                 $filesystem->remove($filePath);
@@ -95,9 +93,9 @@ final class PostgresBackupCommand
         // Dump the Postgres database
         $pgDumpCommand = vsprintf('%s --no-acl --no-owner --host=%s --username=%s --dbname=%s --file=%s %s', [
             $binary,
-            escapeshellarg($dbHost),
-            escapeshellarg($dbUser),
-            escapeshellarg($dbName),
+            escapeshellarg($params['host']),
+            escapeshellarg($params['user']),
+            escapeshellarg($params['dbname']),
             escapeshellarg($filePath),
             $excludeTableArguments,
         ]);
