@@ -3,9 +3,10 @@
 namespace OneToMany\PostgresBundle\Type\EarthDistance;
 
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Types\ConversionException;
 use Doctrine\DBAL\Types\Type;
+use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
 
+use function array_filter;
 use function array_map;
 use function array_values;
 use function count;
@@ -66,6 +67,8 @@ final class Earth extends Type
 
     /**
      * @see Doctrine\DBAL\Types\Type
+     *
+     * @throws InvalidArgumentException when the value is not an array of exactly three numeric elements
      */
     public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): ?string
     {
@@ -73,16 +76,12 @@ final class Earth extends Type
             return null;
         }
 
-        if (3 !== count($value)) {
-            throw new ConversionException(sprintf('Type "%s" requires list of exactly three values.', $this->getName()));
-        }
-
-        $points = array_map('is_numeric', $value);
+        $points = array_filter($value, 'is_numeric');
 
         if (3 !== count($points)) {
-            throw new ConversionException(sprintf('Type "%s" requires list of exactly three numeric values.', $this->getName()));
+            throw new InvalidArgumentException(sprintf('Type "%s" requires a list of exactly three numeric elements.', $this->getName()));
         }
 
-        return sprintf('(%s)', implode(', ', array_values($value)));
+        return sprintf('(%s)', implode(', ', array_values($points)));
     }
 }
