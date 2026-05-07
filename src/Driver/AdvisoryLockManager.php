@@ -11,7 +11,9 @@ use function sprintf;
 
 class AdvisoryLockManager
 {
-    public function __construct(private ?Connection $connection = null)
+    public function __construct(
+        private ?Connection $connection = null,
+    )
     {
     }
 
