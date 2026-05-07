@@ -7,6 +7,7 @@ use Doctrine\DBAL\Exception as DbalExceptionInterface;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
+use function array_key_exists;
 use function sprintf;
 
 class AdvisoryLockManager
@@ -18,8 +19,7 @@ class AdvisoryLockManager
 
     public function __construct(
         private ?Connection $connection = null,
-    )
-    {
+    ) {
     }
 
     /**
@@ -45,7 +45,7 @@ class AdvisoryLockManager
     {
         $this->assertLockKeyIsPositive($lockKey);
 
-        if (\array_key_exists($lockKey, $this->lockKeys)) {
+        if (array_key_exists($lockKey, $this->lockKeys)) {
             try {
                 $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
             } catch (DbalExceptionInterface $e) {
