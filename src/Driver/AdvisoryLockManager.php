@@ -3,7 +3,7 @@
 namespace OneToMany\PostgresBundle\Driver;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Exception as DbalExceptionInterface;
+use Doctrine\DBAL\Exception as DoctrineExceptionInterface;
 use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
@@ -30,8 +30,8 @@ class AdvisoryLockManager
 
         try {
             $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$lockKey]);
-        } catch (DbalExceptionInterface $e) {
-            throw new RuntimeException(sprintf('Acquiring advisory lock %d failed.', $lockKey), previous: $e);
+        } catch (DoctrineExceptionInterface $e) {
+            throw new RuntimeException(sprintf('Acquiring advisory lock "%d" failed.', $lockKey), previous: $e);
         }
 
         $this->lockKeys[$lockKey] = true;
@@ -47,8 +47,8 @@ class AdvisoryLockManager
         if (isset($this->lockKeys[$lockKey])) {
             try {
                 $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
-            } catch (DbalExceptionInterface $e) {
-                throw new RuntimeException(sprintf('Releasing advisory lock %d failed.', $lockKey), previous: $e);
+            } catch (DoctrineExceptionInterface $e) {
+                throw new RuntimeException(sprintf('Releasing advisory lock "%d" failed.', $lockKey), previous: $e);
             }
 
             unset($this->lockKeys[$lockKey]);
@@ -56,11 +56,11 @@ class AdvisoryLockManager
     }
 
     /**
-     * @throws RuntimeException when a connection to the database could not be established
+     * @throws RuntimeException when a database connection is not found
      */
     public function getConnection(): Connection
     {
-        return $this->connection ?? throw new RuntimeException('A connection with the database could not be established.');
+        return $this->connection ?? throw new RuntimeException('Database connection not found.');
     }
 
     public function setConnection(Connection $connection): static
