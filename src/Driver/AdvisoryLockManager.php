@@ -23,18 +23,16 @@ class AdvisoryLockManager
 
     public function exists(int|string $lockKey): bool
     {
-        $lockCount = 0;
-
         try {
             $lockCount = $this->getConnection()->fetchOne('SELECT COUNT(*) FROM pg_locks WHERE locktype = ? AND objid = ? AND pid = pg_backend_pid()', [
-                self::LOCK_TYPE, $this->createKey($lockKey),
+                self::LOCK_TYPE, $this->hashLockKey($lockKey),
             ]);
 
             $lockCount = is_int($lockCount) ? max(0, $lockCount) : 0;
         } catch (DoctrineExceptionInterface) {
         }
 
-        return $lockCount > 0;
+        return isset($lockCount) ? ($lockCount > 0) : false;
     }
 
     /**
@@ -42,12 +40,14 @@ class AdvisoryLockManager
      */
     public function lock(int|string $lockKey): void
     {
-        $lockKey = $this->createKey($lockKey);
+        $lockKey = $this->hashLockKey($lockKey);
 
-        try {
-            $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$lockKey]);
-        } catch (DoctrineExceptionInterface $e) {
-            throw new RuntimeException(sprintf('Acquiring advisory lock "%d" failed.', $lockKey), previous: $e);
+        if (!$this->exists($lockKey)) {
+            try {
+                $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$lockKey]);
+            } catch (DoctrineExceptionInterface $e) {
+                throw new RuntimeException(sprintf('Acquiring advisory lock "%d" failed.', $lockKey), previous: $e);
+            }
         }
     }
 
@@ -56,10 +56,12 @@ class AdvisoryLockManager
      */
     public function unlock(int|string $lockKey): void
     {
-        $lockKey = $this->createKey($lockKey);
+        $lockKey = $this->hashLockKey($lockKey);
 
         try {
-            $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
+            do {
+                $result = $this->getConnection()->fetchOne('SELECT pg_advisory_unlock(?)', [$lockKey]);
+            } while (true === $result);
         } catch (DoctrineExceptionInterface $e) {
             throw new RuntimeException(sprintf('Releasing advisory lock "%d" failed.', $lockKey), previous: $e);
         }
@@ -80,7 +82,7 @@ class AdvisoryLockManager
         return $this;
     }
 
-    private function createKey(int|string $lockKey): int
+    private function hashLockKey(int|string $lockKey): int
     {
         if (is_string($lockKey)) {
             return crc32($lockKey);
