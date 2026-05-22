@@ -60,8 +60,8 @@ class AdvisoryLockManager
 
         try {
             do {
-                $result = $this->getConnection()->fetchOne('SELECT pg_advisory_unlock(?)', [$lockKey]);
-            } while (true === $result);
+                $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
+            } while ($this->exists($lockKey));
         } catch (DoctrineExceptionInterface $e) {
             throw new RuntimeException(sprintf('Releasing advisory lock "%d" failed.', $lockKey), previous: $e);
         }
