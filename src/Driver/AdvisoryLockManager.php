@@ -24,7 +24,7 @@ class AdvisoryLockManager
     public function exists(int|string $lockKey): bool
     {
         try {
-            $lockCount = $this->getConnection()->fetchOne('SELECT COUNT(*) FROM pg_locks WHERE locktype = ? AND objid = ? AND pid = pg_backend_pid()', [
+            $lockCount = $this->getConnection()->fetchOne('SELECT COUNT(*) FROM pg_locks WHERE locktype = ? AND objid::bigint = ? AND pid = pg_backend_pid()', [
                 self::LOCK_TYPE, $this->hashLockKey($lockKey),
             ]);
 
