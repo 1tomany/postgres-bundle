@@ -34,7 +34,7 @@
     "scripts": {
         "fix": "php-cs-fixer fix",
         "stan": "phpstan",
-        "test": "./vendor/bin/phpunit",
+        "test": "phpunit",
         "flat": [
             "@fix",
             "@stan",
