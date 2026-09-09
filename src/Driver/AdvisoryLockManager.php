@@ -37,11 +37,11 @@ class AdvisoryLockManager
      */
     public function lock(int|string $lockKey): void
     {
-        if (false === $this->exists($lockKey)) {
+        if (!$this->exists($lockKey)) {
             $key = $this->generateKey($lockKey);
 
             try {
-                $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$key]);
+                $this->getConnection()->executeStatement(sprintf('SELECT pg_advisory_lock(%d)', $key));
             } catch (\Throwable $e) {
                 throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
             }
@@ -55,11 +55,11 @@ class AdvisoryLockManager
      */
     public function unlock(int|string $lockKey): void
     {
-        if (true === $this->exists($lockKey)) {
+        if ($this->exists($lockKey)) {
             $key = $this->generateKey($lockKey);
 
             try {
-                $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$key]);
+                $this->getConnection()->executeStatement(sprintf('SELECT pg_advisory_unlock(%d)', $key));
             } catch (\Throwable $e) {
                 throw new RuntimeException(sprintf('Releasing advisory lock "%s" failed.', (string) $lockKey), previous: $e);
             } finally {
