@@ -3,18 +3,18 @@
 namespace OneToMany\PostgresBundle\Driver;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Exception as DoctrineExceptionInterface;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function crc32;
-use function is_int;
 use function is_string;
-use function max;
 use function sprintf;
 
 class AdvisoryLockManager
 {
-    public const string LOCK_TYPE = 'advisory';
+    /**
+     * @var array<int, bool>
+     */
+    private array $locks = [];
 
     public function __construct(
         private ?Connection $connection = null,
@@ -23,16 +23,13 @@ class AdvisoryLockManager
 
     public function exists(int|string $lockKey): bool
     {
-        try {
-            $lockCount = $this->getConnection()->fetchOne('SELECT COUNT(*) FROM pg_locks WHERE locktype = ? AND objid::bigint = ? AND pid = pg_backend_pid()', [
-                self::LOCK_TYPE, $this->hashLockKey($lockKey),
-            ]);
+        $key = $this->generateKey($lockKey);
 
-            $lockCount = is_int($lockCount) ? max(0, $lockCount) : 0;
-        } catch (DoctrineExceptionInterface) {
+        if (isset($this->locks[$key])) {
+            return $this->locks[$key];
         }
 
-        return isset($lockCount) ? ($lockCount > 0) : false;
+        return false;
     }
 
     /**
@@ -40,14 +37,16 @@ class AdvisoryLockManager
      */
     public function lock(int|string $lockKey): void
     {
-        $lockKey = $this->hashLockKey($lockKey);
-
         if (!$this->exists($lockKey)) {
+            $key = $this->generateKey($lockKey);
+
             try {
-                $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$lockKey]);
-            } catch (DoctrineExceptionInterface $e) {
-                throw new RuntimeException(sprintf('Acquiring advisory lock "%d" failed.', $lockKey), previous: $e);
+                $this->getConnection()->executeStatement(sprintf('SELECT pg_advisory_lock(%d)', $key));
+            } catch (\Throwable $e) {
+                throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
             }
+
+            $this->locks[$key] = true;
         }
     }
 
@@ -56,14 +55,16 @@ class AdvisoryLockManager
      */
     public function unlock(int|string $lockKey): void
     {
-        $lockKey = $this->hashLockKey($lockKey);
+        if ($this->exists($lockKey)) {
+            $key = $this->generateKey($lockKey);
 
-        try {
-            do {
-                $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
-            } while ($this->exists($lockKey));
-        } catch (DoctrineExceptionInterface $e) {
-            throw new RuntimeException(sprintf('Releasing advisory lock "%d" failed.', $lockKey), previous: $e);
+            try {
+                $this->getConnection()->executeStatement(sprintf('SELECT pg_advisory_unlock(%d)', $key));
+            } catch (\Throwable $e) {
+                throw new RuntimeException(sprintf('Releasing advisory lock "%s" failed.', (string) $lockKey), previous: $e);
+            } finally {
+                $this->locks[$key] = false;
+            }
         }
     }
 
@@ -82,7 +83,7 @@ class AdvisoryLockManager
         return $this;
     }
 
-    private function hashLockKey(int|string $lockKey): int
+    private function generateKey(int|string $lockKey): int
     {
         if (is_string($lockKey)) {
             return crc32($lockKey);

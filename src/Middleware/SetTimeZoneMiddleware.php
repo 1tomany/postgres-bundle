@@ -7,7 +7,7 @@ use Doctrine\DBAL\Driver\Connection;
 use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
 use Doctrine\DBAL\Driver\Middleware as MiddlewareInterface;
 use Doctrine\DBAL\Exception as DbalExceptionInterface;
-use OneToMany\PostgresBundle\Exception\InvalidArgumentException;
+use OneToMany\PostgresBundle\Exception\DomainException;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function in_array;
@@ -19,7 +19,7 @@ final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
     public function __construct(private string $timeZone = 'UTC')
     {
         if (!in_array($this->timeZone, timezone_identifiers_list())) {
-            throw new InvalidArgumentException(sprintf('The time zone "%s" is not valid.', $this->timeZone));
+            throw new DomainException(sprintf('The time zone "%s" is not valid.', $this->timeZone));
         }
     }
 
