@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function crc32;
+use function implode;
 use function is_string;
 use function sprintf;
 
@@ -19,6 +20,12 @@ class AdvisoryLockManager
     public function __construct(
         private ?Connection $connection = null,
     ) {
+    }
+
+    public static function createKey(
+        int|string ...$keyBits,
+    ): string {
+        return implode(':', $keyBits);
     }
 
     public function exists(int|string $lockKey): bool
