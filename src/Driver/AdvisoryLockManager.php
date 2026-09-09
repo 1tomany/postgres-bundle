@@ -23,10 +23,10 @@ class AdvisoryLockManager
 
     public function exists(int|string $lockKey): bool
     {
-        $lockKey = $this->hashLockKey($lockKey);
+        $key = $this->generateKey($lockKey);
 
-        if (isset($this->locks[$lockKey])) {
-            return $this->locks[$lockKey];
+        if (isset($this->locks[$key])) {
+            return $this->locks[$key];
         }
 
         return false;
@@ -37,16 +37,16 @@ class AdvisoryLockManager
      */
     public function lock(int|string $lockKey): void
     {
-        $lockKey = $this->hashLockKey($lockKey);
+        if (false === $this->exists($lockKey)) {
+            $key = $this->generateKey($lockKey);
 
-        if (!$this->exists($lockKey)) {
             try {
-                $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$lockKey]);
+                $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$key]);
             } catch (\Throwable $e) {
-                throw new RuntimeException(sprintf('Acquiring advisory lock "%d" failed.', $lockKey), previous: $e);
+                throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
             }
 
-            $this->locks[$lockKey] = true;
+            $this->locks[$key] = true;
         }
     }
 
@@ -55,14 +55,16 @@ class AdvisoryLockManager
      */
     public function unlock(int|string $lockKey): void
     {
-        $lockKey = $this->hashLockKey($lockKey);
+        if (true === $this->exists($lockKey)) {
+            $key = $this->generateKey($lockKey);
 
-        try {
-            $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
-        } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Releasing advisory lock "%d" failed.', $lockKey), previous: $e);
-        } finally {
-            $this->locks[$lockKey] = false;
+            try {
+                $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$key]);
+            } catch (\Throwable $e) {
+                throw new RuntimeException(sprintf('Releasing advisory lock "%s" failed.', (string) $lockKey), previous: $e);
+            } finally {
+                $this->locks[$key] = false;
+            }
         }
     }
 
@@ -81,7 +83,7 @@ class AdvisoryLockManager
         return $this;
     }
 
-    private function hashLockKey(int|string $lockKey): int
+    private function generateKey(int|string $lockKey): int
     {
         if (is_string($lockKey)) {
             return crc32($lockKey);
