@@ -6,7 +6,6 @@ use Doctrine\DBAL\Connection;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function crc32;
-use function implode;
 use function is_string;
 use function sprintf;
 
@@ -22,15 +21,9 @@ class AdvisoryLockManager
     ) {
     }
 
-    public static function createKey(
-        int|string ...$keyBits,
-    ): string {
-        return implode(':', $keyBits);
-    }
-
     public function exists(int|string $lockKey): bool
     {
-        $key = $this->generateKey($lockKey);
+        $key = $this->hashKey($lockKey);
 
         if (isset($this->locks[$key])) {
             return $this->locks[$key];
@@ -45,7 +38,7 @@ class AdvisoryLockManager
     public function lock(int|string $lockKey): void
     {
         if (!$this->exists($lockKey)) {
-            $key = $this->generateKey($lockKey);
+            $key = $this->hashKey($lockKey);
 
             try {
                 $this->getConnection()->executeStatement(sprintf('SELECT pg_advisory_lock(%d)', $key));
@@ -63,7 +56,7 @@ class AdvisoryLockManager
     public function unlock(int|string $lockKey): void
     {
         if ($this->exists($lockKey)) {
-            $key = $this->generateKey($lockKey);
+            $key = $this->hashKey($lockKey);
 
             try {
                 $this->getConnection()->executeStatement(sprintf('SELECT pg_advisory_unlock(%d)', $key));
@@ -90,7 +83,7 @@ class AdvisoryLockManager
         return $this;
     }
 
-    private function generateKey(int|string $lockKey): int
+    private function hashKey(int|string $lockKey): int
     {
         if (is_string($lockKey)) {
             return crc32($lockKey);
