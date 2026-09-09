@@ -3,7 +3,6 @@
 namespace OneToMany\PostgresBundle\Driver;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Exception as DoctrineExceptionInterface;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function crc32;
@@ -16,8 +15,6 @@ class AdvisoryLockManager
      * @var array<int, bool>
      */
     private array $locks = [];
-
-    public const string LOCK_TYPE = 'advisory';
 
     public function __construct(
         private ?Connection $connection = null,
@@ -45,7 +42,7 @@ class AdvisoryLockManager
         if (!$this->exists($lockKey)) {
             try {
                 $this->getConnection()->executeStatement('SELECT pg_advisory_lock(?)', [$lockKey]);
-            } catch (DoctrineExceptionInterface $e) {
+            } catch (\Throwable $e) {
                 throw new RuntimeException(sprintf('Acquiring advisory lock "%d" failed.', $lockKey), previous: $e);
             }
 
@@ -62,7 +59,7 @@ class AdvisoryLockManager
 
         try {
             $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
-        } catch (DoctrineExceptionInterface $e) {
+        } catch (\Throwable $e) {
             throw new RuntimeException(sprintf('Releasing advisory lock "%d" failed.', $lockKey), previous: $e);
         } finally {
             $this->locks[$lockKey] = false;
