@@ -14,6 +14,12 @@ use function sprintf;
 
 class AdvisoryLockManager
 {
+
+    /**
+     * @var array<int, bool>
+     */
+    private array $locks = [];
+
     public const string LOCK_TYPE = 'advisory';
 
     public function __construct(
@@ -23,16 +29,13 @@ class AdvisoryLockManager
 
     public function exists(int|string $lockKey): bool
     {
-        try {
-            $lockCount = $this->getConnection()->fetchOne('SELECT COUNT(*) FROM pg_locks WHERE locktype = ? AND objid::bigint = ? AND pid = pg_backend_pid()', [
-                self::LOCK_TYPE, $this->hashLockKey($lockKey),
-            ]);
+        $lockKey = $this->hashLockKey($lockKey);
 
-            $lockCount = is_int($lockCount) ? max(0, $lockCount) : 0;
-        } catch (DoctrineExceptionInterface) {
+        if (isset($this->locks[$lockKey])) {
+            return $this->locks[$lockKey];
         }
 
-        return isset($lockCount) ? ($lockCount > 0) : false;
+        return false;
     }
 
     /**
@@ -48,6 +51,8 @@ class AdvisoryLockManager
             } catch (DoctrineExceptionInterface $e) {
                 throw new RuntimeException(sprintf('Acquiring advisory lock "%d" failed.', $lockKey), previous: $e);
             }
+
+            $this->locks[$lockKey] = true;
         }
     }
 
@@ -59,11 +64,11 @@ class AdvisoryLockManager
         $lockKey = $this->hashLockKey($lockKey);
 
         try {
-            do {
-                $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
-            } while ($this->exists($lockKey));
+            $this->getConnection()->executeStatement('SELECT pg_advisory_unlock(?)', [$lockKey]);
         } catch (DoctrineExceptionInterface $e) {
             throw new RuntimeException(sprintf('Releasing advisory lock "%d" failed.', $lockKey), previous: $e);
+        } finally {
+            $this->locks[$lockKey] = false;
         }
     }
 
