@@ -7,14 +7,11 @@ use Doctrine\DBAL\Exception as DoctrineExceptionInterface;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function crc32;
-use function is_int;
 use function is_string;
-use function max;
 use function sprintf;
 
 class AdvisoryLockManager
 {
-
     /**
      * @var array<int, bool>
      */
