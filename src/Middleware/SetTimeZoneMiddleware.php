@@ -16,10 +16,14 @@ use function timezone_identifiers_list;
 
 final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
 {
-    public function __construct(private string $timeZone = 'UTC')
-    {
+    /**
+     * @throws DomainException when the timezone is not valid
+     */
+    public function __construct(
+        private string $timeZone = 'UTC',
+    ) {
         if (!in_array($this->timeZone, timezone_identifiers_list())) {
-            throw new DomainException(sprintf('The time zone "%s" is not valid.', $this->timeZone));
+            throw new DomainException(sprintf('The timezone "%s" is not valid.', $this->timeZone));
         }
     }
 
@@ -30,16 +34,23 @@ final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
     public function wrap(Driver $driver): Driver
     {
         $wrappedDriver = new class($driver, $this->timeZone) extends AbstractDriverMiddleware {
-            public function __construct(Driver $wrappedDriver, private string $timeZone)
-            {
+            public function __construct(
+                Driver $wrappedDriver,
+                private string $timeZone,
+            ) {
                 parent::__construct($wrappedDriver);
             }
 
+            /**
+             * @see Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware
+             *
+             * @throws RuntimeException when setting the timezone fails
+             */
+            #[\Override]
             public function connect(
                 #[\SensitiveParameter]
                 array $params,
-            ): Connection
-            {
+            ): Connection {
                 $connection = parent::connect($params);
 
                 try {
