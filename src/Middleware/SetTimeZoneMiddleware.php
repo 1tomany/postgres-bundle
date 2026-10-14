@@ -23,6 +23,10 @@ final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
         }
     }
 
+    /**
+     * @see Doctrine\DBAL\Driver\Middleware
+     */
+    #[\Override]
     public function wrap(Driver $driver): Driver
     {
         $wrappedDriver = new class($driver, $this->timeZone) extends AbstractDriverMiddleware {
@@ -31,7 +35,10 @@ final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
                 parent::__construct($wrappedDriver);
             }
 
-            public function connect(#[\SensitiveParameter] array $params): Connection
+            public function connect(
+                #[\SensitiveParameter]
+                array $params,
+            ): Connection
             {
                 $connection = parent::connect($params);
 
