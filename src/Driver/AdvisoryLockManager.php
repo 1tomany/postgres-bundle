@@ -51,6 +51,23 @@ class AdvisoryLockManager
     }
 
     /**
+     * @throws RuntimeException when acquiring the advisory lock outside of an active transaction
+     * @throws RuntimeException when acquiring the advisory lock fails
+     */
+    public function xactLock(int|string $lockKey): void
+    {
+        if (!$this->getConnection()->isTransactionActive()) {
+            throw new RuntimeException(sprintf('Acquiring the advisory lock "%s" requires an active transaction.', (string) $lockKey));
+        }
+
+        try {
+            $this->getConnection()->executeStatement(sprintf('SELECT pg_advisory_xact_lock(%d)', $this->hashKey($lockKey)));
+        } catch (\Throwable $e) {
+            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
+        }
+    }
+
+    /**
      * @throws RuntimeException when releasing the advisory lock fails
      */
     public function unlock(int|string $lockKey): void

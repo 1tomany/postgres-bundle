@@ -6,7 +6,6 @@ use Doctrine\DBAL\Driver;
 use Doctrine\DBAL\Driver\Connection;
 use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
 use Doctrine\DBAL\Driver\Middleware as MiddlewareInterface;
-use Doctrine\DBAL\Exception as DbalExceptionInterface;
 use OneToMany\PostgresBundle\Exception\DomainException;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
@@ -16,28 +15,46 @@ use function timezone_identifiers_list;
 
 final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
 {
-    public function __construct(private string $timeZone = 'UTC')
-    {
+    /**
+     * @throws DomainException when the timezone is not valid
+     */
+    public function __construct(
+        private string $timeZone = 'UTC',
+    ) {
         if (!in_array($this->timeZone, timezone_identifiers_list())) {
-            throw new DomainException(sprintf('The time zone "%s" is not valid.', $this->timeZone));
+            throw new DomainException(sprintf('The timezone "%s" is not valid.', $this->timeZone));
         }
     }
 
+    /**
+     * @see Doctrine\DBAL\Driver\Middleware
+     */
+    #[\Override]
     public function wrap(Driver $driver): Driver
     {
         $wrappedDriver = new class($driver, $this->timeZone) extends AbstractDriverMiddleware {
-            public function __construct(Driver $wrappedDriver, private string $timeZone)
-            {
+            public function __construct(
+                Driver $wrappedDriver,
+                private string $timeZone,
+            ) {
                 parent::__construct($wrappedDriver);
             }
 
-            public function connect(#[\SensitiveParameter] array $params): Connection
-            {
+            /**
+             * @see Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware
+             *
+             * @throws RuntimeException when setting the timezone fails
+             */
+            #[\Override]
+            public function connect(
+                #[\SensitiveParameter]
+                array $params,
+            ): Connection {
                 $connection = parent::connect($params);
 
                 try {
                     $connection->exec(sprintf("SET timezone = '%s'", $this->timeZone));
-                } catch (DbalExceptionInterface $e) {
+                } catch (\Throwable $e) {
                     throw new RuntimeException(sprintf('Setting the timezone to "%s" failed.', $this->timeZone), previous: $e);
                 }
 

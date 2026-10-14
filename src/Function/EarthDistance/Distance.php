@@ -22,6 +22,7 @@ final class Distance extends FunctionNode
     /**
      * @see Doctrine\ORM\Query\AST\Functions\FunctionNode
      */
+    #[\Override]
     public function parse(Parser $parser): void
     {
         // DISTANCE(earthCol, :latitude, :longitude)
@@ -52,6 +53,7 @@ final class Distance extends FunctionNode
      *
      * @return non-empty-string
      */
+    #[\Override]
     public function getSql(SqlWalker $sqlWalker): string
     {
         if (
