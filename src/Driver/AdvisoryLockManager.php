@@ -51,6 +51,31 @@ class AdvisoryLockManager
     }
 
     /**
+     * Acquires a transaction-level advisory lock that Postgres releases
+     * automatically when the current transaction commits or rolls back.
+     * Because the lock cannot be released early, it is not tracked by
+     * this class and is not reflected by exists() or unlock().
+     *
+     * @throws RuntimeException when no transaction is active
+     * @throws RuntimeException when acquiring the advisory lock fails
+     */
+    public function xactLock(int|string $lockKey): void
+    {
+        $connection = $this->getConnection();
+
+        // Outside of a transaction the lock is released as soon as the statement completes
+        if (!$connection->isTransactionActive()) {
+            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed because no transaction is active.', (string) $lockKey));
+        }
+
+        try {
+            $connection->executeStatement(sprintf('SELECT pg_advisory_xact_lock(%d)', $this->hashKey($lockKey)));
+        } catch (\Throwable $e) {
+            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
+        }
+    }
+
+    /**
      * @throws RuntimeException when releasing the advisory lock fails
      */
     public function unlock(int|string $lockKey): void
