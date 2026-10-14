@@ -6,7 +6,6 @@ use Doctrine\DBAL\Driver;
 use Doctrine\DBAL\Driver\Connection;
 use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
 use Doctrine\DBAL\Driver\Middleware as MiddlewareInterface;
-use Doctrine\DBAL\Exception as DbalExceptionInterface;
 use OneToMany\PostgresBundle\Exception\DomainException;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
@@ -55,7 +54,7 @@ final readonly class SetTimeZoneMiddleware implements MiddlewareInterface
 
                 try {
                     $connection->exec(sprintf("SET timezone = '%s'", $this->timeZone));
-                } catch (DbalExceptionInterface $e) {
+                } catch (\Throwable $e) {
                     throw new RuntimeException(sprintf('Setting the timezone to "%s" failed.', $this->timeZone), previous: $e);
                 }
 

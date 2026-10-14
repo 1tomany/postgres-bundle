@@ -23,6 +23,7 @@ final class Boundary extends FunctionNode
     /**
      * @see Doctrine\ORM\Query\AST\Functions\FunctionNode
      */
+    #[\Override]
     public function parse(Parser $parser): void
     {
         // BOUNDARY(earthCol, :latitude, :longitude, :boxSize)
@@ -59,6 +60,7 @@ final class Boundary extends FunctionNode
      *
      * @return non-empty-string
      */
+    #[\Override]
     public function getSql(SqlWalker $sqlWalker): string
     {
         if (
