@@ -28,8 +28,6 @@ use function trim;
 final class Earth extends Type
 {
     /**
-     * @see Doctrine\DBAL\Types\Type
-     *
      * @return 'earth'
      */
     public function getName(): string
@@ -42,8 +40,11 @@ final class Earth extends Type
      *
      * @return 'earth'
      */
-    public function getSQLDeclaration(array $column, AbstractPlatform $platform): string
-    {
+    #[\Override]
+    public function getSQLDeclaration(
+        array $column,
+        AbstractPlatform $platform,
+    ): string {
         return 'earth';
     }
 
@@ -52,8 +53,11 @@ final class Earth extends Type
      *
      * @return ?EarthPoint
      */
-    public function convertToPHPValue(mixed $value, AbstractPlatform $platform): ?array
-    {
+    #[\Override]
+    public function convertToPHPValue(
+        mixed $value,
+        AbstractPlatform $platform,
+    ): ?array {
         $value = is_string($value) ? trim($value) : '';
 
         // Example: (-631765.752065, -5310503.3232811, 3475694.6822414)
@@ -70,8 +74,11 @@ final class Earth extends Type
      *
      * @throws DomainException when the value is not an array of exactly three numeric elements
      */
-    public function convertToDatabaseValue(mixed $value, AbstractPlatform $platform): ?string
-    {
+    #[\Override]
+    public function convertToDatabaseValue(
+        mixed $value,
+        AbstractPlatform $platform,
+    ): ?string {
         if (!is_array($value)) {
             return null;
         }
