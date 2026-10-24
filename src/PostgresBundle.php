@@ -26,8 +26,7 @@ class PostgresBundle extends AbstractBundle
     #[\Override]
     public function configure(
         DefinitionConfigurator $definition,
-    ): void
-    {
+    ): void {
         $definition
             ->rootNode()
                 ->children()
@@ -60,8 +59,7 @@ class PostgresBundle extends AbstractBundle
     public function prependExtension(
         ContainerConfigurator $container,
         ContainerBuilder $builder,
-    ): void
-    {
+    ): void {
         if ($builder->hasExtension('doctrine')) {
             $builder->prependExtensionConfig('doctrine', [
                 'dbal' => [
@@ -98,13 +96,12 @@ class PostgresBundle extends AbstractBundle
         array $config,
         ContainerConfigurator $container,
         ContainerBuilder $builder,
-    ): void
-    {
+    ): void {
         $container
             ->services()
                 // Drivers
                 ->set(LockManager::class)
-                    ->arg('$connection', service($config['advisory_lock_manager']['connection']))
+                    ->arg('$connection', service($config['lock_manager']['connection']))
 
                 // Middlewares
                 ->set(SetTimeZoneMiddleware::class)
