@@ -4,8 +4,8 @@ namespace OneToMany\PostgresBundle\Driver;
 
 use Doctrine\DBAL\Connection;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
-use OneToMany\PostgresBundle\Lock\Key;
 use OneToMany\PostgresBundle\Lock\AdvisoryLock;
+use OneToMany\PostgresBundle\Lock\Key;
 
 use function is_int;
 use function sprintf;
