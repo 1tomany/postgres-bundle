@@ -4,7 +4,8 @@ namespace OneToMany\PostgresBundle\Driver;
 
 use Doctrine\DBAL\Connection;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
-use OneToMany\PostgresBundle\Util\LockKeyUtil;
+use OneToMany\PostgresBundle\Lock\Key;
+use OneToMany\PostgresBundle\Lock\Lock;
 
 use function is_int;
 use function sprintf;
@@ -19,15 +20,19 @@ class LockManager
     /**
      * @throws RuntimeException when acquiring the advisory lock fails
      */
-    #[\NoDiscard('The advisory lock is released when the returned AdvisoryLock is destroyed')]
-    public function lock(int|string $key): Lock
+    #[\NoDiscard()]
+    public function lock(int|string|Key $key): Lock
     {
+        if (!$key instanceof Key) {
+            $key = new Key($key);
+        }
+
         try {
             $pid = $this->getConnection()->fetchOne('SELECT pg_backend_pid() FROM pg_advisory_lock(:id)', [
-                'id' => LockKeyUtil::hash($key),
+                'id' => $key->getId(),
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed.', (string) $key), previous: $e);
+            throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed.', $key->getKey()), previous: $e);
         }
 
         return $this->createLock($key, $pid);
@@ -36,45 +41,53 @@ class LockManager
     /**
      * @throws RuntimeException when acquiring the advisory lock fails
      */
-    #[\NoDiscard('The advisory lock is released when the returned AdvisoryLock is destroyed')]
-    public function tryLock(int|string $lockKey): ?Lock
+    #[\NoDiscard()]
+    public function tryLock(int|string|Key $key): ?Lock
     {
-        try {
-            $pid = $this->getConnection()->fetchOne('SELECT pg_backend_pid() WHERE pg_try_advisory_lock(:id)', [
-                'id' => LockKeyUtil::hash($lockKey),
-            ]);
-        } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed.', (string) $lockKey), previous: $e);
+        if (!$key instanceof Key) {
+            $key = new Key($key);
         }
 
-        return false !== $pid ? $this->createLock($lockKey, $key, $pid) : null;
+        try {
+            $pid = $this->getConnection()->fetchOne('SELECT pg_backend_pid() WHERE pg_try_advisory_lock(:id)', [
+                'id' => $key->getId(),
+            ]);
+        } catch (\Throwable $e) {
+            throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed.', $key->getKey()), previous: $e);
+        }
+
+        return false !== $pid ? $this->createLock($key, $pid) : null;
     }
 
     /**
      * @throws RuntimeException when acquiring the advisory lock outside of an active transaction
      * @throws RuntimeException when acquiring the advisory lock fails
      */
-    public function xactLock(int|string $lockKey): void
+    public function xactLock(int|string|Key $key): void
     {
+        if (!$key instanceof Key) {
+            $key = new Key($key);
+        }
+
         if (!$this->getConnection()->isTransactionActive()) {
-            throw new RuntimeException(sprintf('Acquiring the advisory lock "%s" requires an active transaction.', (string) $lockKey));
+            throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" requires an active transaction.', $key->getKey()));
         }
 
         try {
-            $this->getConnection()->executeStatement('SELECT pg_advisory_xact_lock(:key)', [
-                'key' => LockKeyUtil::hash($lockKey),
+            $this->getConnection()->executeStatement('SELECT pg_advisory_xact_lock(:id)', [
+                'id' => $key->getId(),
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
+            throw new RuntimeException(sprintf('Acquiring an advisory transaction lock for the key "%s" failed.', $key->getKey()), previous: $e);
         }
     }
 
     /**
-     * @throws RuntimeException when a database connection is not found
+     * @throws RuntimeException when a database connection has not been set
      */
     public function getConnection(): Connection
     {
-        return $this->connection ?? throw new RuntimeException('Database connection not found.');
+        return $this->connection ?? throw new RuntimeException('A database connection has not been set.');
     }
 
     public function setConnection(Connection $connection): static
@@ -88,13 +101,13 @@ class LockManager
      * @throws RuntimeException when the backend PID is invalid
      */
     private function createLock(
-        int|string $lockKey,
+        Key $key,
         mixed $pid,
     ): Lock {
         if (!is_int($pid) || $pid <= 0) {
-            throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed because the backend PID could not be determined.', (string) $lockKey));
+            throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed because an invalid backend PID was found.', $key->getKey()));
         }
 
-        return new Lock($this->getConnection(), (string) $lockKey, $key, $pid);
+        return new Lock($this->getConnection(), $key, $pid);
     }
 }

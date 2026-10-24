@@ -9,16 +9,15 @@ use function sprintf;
 
 final class Lock
 {
-    public private(set) bool $released = false;
+    private bool $released = false;
 
     /**
      * @internal use AdvisoryLockManager::lock() or AdvisoryLockManager::tryLock()
      */
     public function __construct(
-        private readonly Connection $connection,
-        public readonly int $id,
-        public readonly string $key,
-        public readonly int $pid,
+        private Connection $connection,
+        private Key $key,
+        private int $pid,
     ) {
     }
 
@@ -30,9 +29,9 @@ final class Lock
         }
     }
 
-    public function getId(): int
+    public function isReleased(): bool
     {
-        return $this->id;
+        return $this->released;
     }
 
     /**
@@ -40,56 +39,47 @@ final class Lock
      */
     public function isAcquired(): bool
     {
-        if ($this->released || !$this->isConnected()) {
+        if (
+            $this->isReleased()
+            || !$this->isConnected()
+        ) {
             return false;
         }
 
         try {
-            $acquired = $this->connection->fetchOne("SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND pid = :pid AND objid = :key AND granted", [
+            $acquired = $this->connection->fetchOne("SELECT true FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND pid = :pid AND objid::bigint = :id AND granted = true", [
                 'pid' => $this->pid,
-                'key' => $this->id,
+                'key' => $this->key->getId(),
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Querying the status of the advisory lock "%s" failed.', $this->key), previous: $e);
+            throw new RuntimeException(sprintf('Querying the status of the advisory lock "%s" failed.', $this->key->getKey()), previous: $e);
         }
 
         return true === $acquired;
     }
 
     /**
-     * Releases the lock. Returns true if the lock was released by this call,
-     * or false if it was already released or its session no longer exists.
-     *
      * @throws RuntimeException when releasing the advisory lock fails
      */
     public function release(): bool
     {
-        if ($this->released) {
+        if ($this->isReleased()) {
             return false;
         }
 
-        // Mark the lock as released first so a failure below is not
-        // retried by the destructor; a failed query almost always means
-        // the session, and therefore the lock, no longer exists anyway
         $this->released = true;
 
-        // A closed connection means the session that held the lock ended,
-        // and querying now would only open a new session to a new backend
-        if (!$this->connection->isConnected()) {
+        if (!$this->isConnected()) {
             return false;
         }
 
-        // Only unlock when still connected to the backend that acquired
-        // the lock; after a reconnect it belongs to a session that is gone
-        $sql = 'SELECT CASE WHEN pg_backend_pid() = :pid THEN pg_advisory_unlock(:key) ELSE false END';
-
         try {
-            $released = $this->connection->fetchOne($sql, [
+            $released = $this->connection->fetchOne('SELECT CASE WHEN pg_backend_pid() = :pid THEN pg_advisory_unlock(:id) ELSE false END', [
                 'pid' => $this->pid,
-                'key' => $this->id,
+                'id' => $this->key->getId(),
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Releasing advisory lock "%s" failed.', $this->key), previous: $e);
+            throw new RuntimeException(sprintf('Releasing the advisory lock for the key "%s" failed.', $this->key->getKey()), previous: $e);
         }
 
         return true === $released;
