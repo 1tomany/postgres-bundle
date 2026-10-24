@@ -13,7 +13,7 @@ use function sprintf;
 class LockManager
 {
     public function __construct(
-        private Connection $connection,
+        private readonly Connection $connection,
     ) {
     }
 

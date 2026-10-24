@@ -45,8 +45,9 @@ final class Key implements \Stringable
     /**
      * @throws DomainException when a valid key cannot be generated
      */
-    public static function create(int|string ...$bits): static
-    {
+    public static function create(
+        int|string ...$bits,
+    ): static {
         $keyBits = [];
 
         if (0 !== $count = count($bits)) {
