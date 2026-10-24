@@ -19,12 +19,6 @@ class AdvisoryLockManager
     }
 
     /**
-     * Acquires a session level advisory lock, waiting until it is available.
-     *
-     * Postgres counts session level locks, so acquiring the same key twice
-     * in one session requires releasing it twice. Each AdvisoryLock owns
-     * exactly one acquisition, so nested locks on the same key are safe.
-     *
      * @throws RuntimeException when acquiring the advisory lock fails
      */
     #[\NoDiscard('The advisory lock is released when the returned AdvisoryLock is destroyed')]
@@ -35,15 +29,13 @@ class AdvisoryLockManager
         try {
             $pid = $this->getConnection()->fetchOne('SELECT pg_backend_pid(), pg_advisory_lock(:key)', [
                 'key' => $key,
-            ], [
-                'key' => ParameterType::INTEGER,
             ]);
         } catch (\Throwable $e) {
             throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
         }
 
-        if (!is_int($pid)) {
-            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed because the backend pid could not be determined.', (string) $lockKey));
+        if (!is_int($pid) || $pid <= 0) {
+            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed because the backend process ID could not be determined.', (string) $lockKey));
         }
 
         return new AdvisoryLock($this->getConnection(), $lockKey, $key, $pid);

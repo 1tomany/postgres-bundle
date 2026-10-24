@@ -8,17 +8,6 @@ use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function sprintf;
 
-/**
- * A session level advisory lock acquired by the AdvisoryLockManager.
- *
- * The lock is bound to the Postgres backend (identified by its pid) that
- * acquired it. If the connection is closed or reconnects to a different
- * backend, the original session and its locks are gone, so the lock is
- * considered released without issuing another query against the server.
- *
- * Locks should be released explicitly with release(); the destructor is
- * only a last resort for code paths that fail to release the lock.
- */
 final class AdvisoryLock
 {
     public private(set) bool $released = false;
@@ -39,41 +28,22 @@ final class AdvisoryLock
         try {
             $this->release();
         } catch (\Throwable) {
-            // Destructors can run while another exception is propagating
-            // or during shutdown, so a failure here must never be thrown
         }
     }
 
     /**
-     * Returns true if the lock is still held by the backend that acquired it.
-     *
      * @throws RuntimeException when querying the lock status fails
      */
     public function isAcquired(): bool
     {
-        if ($this->released || !$this->connection->isConnected()) {
+        if ($this->released || !$this->isConnected()) {
             return false;
         }
 
-        $sql = <<<'SQL'
-            SELECT EXISTS (
-                SELECT 1
-                FROM pg_locks
-                WHERE locktype = 'advisory'
-                    AND pid = pg_backend_pid()
-                    AND pid = :pid
-                    AND objid = :key
-                    AND granted
-            )
-            SQL;
-
         try {
-            $acquired = $this->connection->fetchOne($sql, [
+            $acquired = $this->connection->fetchOne("SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND pid = :pid AND objid = :key AND granted)", [
                 'pid' => $this->pid,
                 'key' => $this->key,
-            ], [
-                'pid' => ParameterType::INTEGER,
-                'key' => ParameterType::INTEGER,
             ]);
         } catch (\Throwable $e) {
             throw new RuntimeException(sprintf('Querying the status of advisory lock "%s" failed.', (string) $this->name), previous: $e);
@@ -122,5 +92,10 @@ final class AdvisoryLock
         }
 
         return true === $released;
+    }
+
+    private function isConnected(): bool
+    {
+        return $this->connection->isConnected();
     }
 }
