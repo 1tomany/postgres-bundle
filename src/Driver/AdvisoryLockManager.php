@@ -20,7 +20,7 @@ class AdvisoryLockManager
     /**
      * @throws RuntimeException when acquiring the advisory lock fails
      */
-    #[\NoDiscard()]
+    #[\NoDiscard('otherwise the lock will be released immediately')]
     public function lock(int|string|Key $key): AdvisoryLock
     {
         if (!$key instanceof Key) {
@@ -41,7 +41,7 @@ class AdvisoryLockManager
     /**
      * @throws RuntimeException when acquiring the advisory lock fails
      */
-    #[\NoDiscard()]
+    #[\NoDiscard('otherwise the lock will be released immediately')]
     public function tryLock(int|string|Key $key): ?AdvisoryLock
     {
         if (!$key instanceof Key) {

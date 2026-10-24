@@ -9,8 +9,6 @@ use function sprintf;
 
 final class AdvisoryLock
 {
-    private bool $released = false;
-
     /**
      * @internal {@see OneToMany\PostgresBundle\Driver\LockManager}
      */
@@ -18,7 +16,9 @@ final class AdvisoryLock
         private Connection $connection,
         private Key $key,
         private int $pid,
+        private bool $released = false,
     ) {
+        $this->released = false;
     }
 
     public function __destruct()
