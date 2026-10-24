@@ -8,6 +8,14 @@ use PHPUnit\Framework\TestCase;
 
 final class KeyTest extends TestCase
 {
+    public function testConstructorRequiresNonEmptyKey(): void
+    {
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessageIs('The key cannot be empty.');
+
+        new Key('');
+    }
+
     public function testCreatingKeyRequiresNonEmptyBits(): void
     {
         $this->expectException(DomainException::class);
