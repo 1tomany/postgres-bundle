@@ -7,12 +7,12 @@ use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function sprintf;
 
-final class Lock
+final class AdvisoryLock
 {
     private bool $released = false;
 
     /**
-     * @internal use AdvisoryLockManager::lock() or AdvisoryLockManager::tryLock()
+     * @internal {@see OneToMany\PostgresBundle\Driver\LockManager}
      */
     public function __construct(
         private Connection $connection,
@@ -40,8 +40,8 @@ final class Lock
     public function isAcquired(): bool
     {
         if (
-            $this->isReleased()
-            || !$this->isConnected()
+            $this->isDisconnected()
+            || $this->isReleased()
         ) {
             return false;
         }
@@ -69,7 +69,7 @@ final class Lock
 
         $this->released = true;
 
-        if (!$this->isConnected()) {
+        if (!$this->isDisconnected()) {
             return false;
         }
 
@@ -85,8 +85,8 @@ final class Lock
         return true === $released;
     }
 
-    private function isConnected(): bool
+    private function isDisconnected(): bool
     {
-        return $this->connection->isConnected();
+        return !$this->connection->isConnected();
     }
 }

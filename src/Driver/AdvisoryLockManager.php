@@ -5,12 +5,12 @@ namespace OneToMany\PostgresBundle\Driver;
 use Doctrine\DBAL\Connection;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 use OneToMany\PostgresBundle\Lock\Key;
-use OneToMany\PostgresBundle\Lock\Lock;
+use OneToMany\PostgresBundle\Lock\AdvisoryLock;
 
 use function is_int;
 use function sprintf;
 
-class LockManager
+class AdvisoryLockManager
 {
     public function __construct(
         private ?Connection $connection = null,
@@ -21,7 +21,7 @@ class LockManager
      * @throws RuntimeException when acquiring the advisory lock fails
      */
     #[\NoDiscard()]
-    public function lock(int|string|Key $key): Lock
+    public function lock(int|string|Key $key): AdvisoryLock
     {
         if (!$key instanceof Key) {
             $key = new Key($key);
@@ -42,7 +42,7 @@ class LockManager
      * @throws RuntimeException when acquiring the advisory lock fails
      */
     #[\NoDiscard()]
-    public function tryLock(int|string|Key $key): ?Lock
+    public function tryLock(int|string|Key $key): ?AdvisoryLock
     {
         if (!$key instanceof Key) {
             $key = new Key($key);
@@ -103,11 +103,11 @@ class LockManager
     private function createLock(
         Key $key,
         mixed $pid,
-    ): Lock {
+    ): AdvisoryLock {
         if (!is_int($pid) || $pid <= 0) {
             throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed because an invalid backend PID was found.', $key->getKey()));
         }
 
-        return new Lock($this->getConnection(), $key, $pid);
+        return new AdvisoryLock($this->getConnection(), $key, $pid);
     }
 }

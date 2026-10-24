@@ -2,7 +2,7 @@
 
 namespace OneToMany\PostgresBundle;
 
-use OneToMany\PostgresBundle\Driver\LockManager;
+use OneToMany\PostgresBundle\Driver\AdvisoryLockManager;
 use OneToMany\PostgresBundle\Function\EarthDistance\Boundary;
 use OneToMany\PostgresBundle\Function\EarthDistance\Distance;
 use OneToMany\PostgresBundle\Middleware\SetTimeZoneMiddleware;
@@ -91,7 +91,7 @@ class PostgresBundle extends AbstractBundle
         $container
             ->services()
                 // Drivers
-                ->set(LockManager::class)
+                ->set(AdvisoryLockManager::class)
                     ->arg('$connection', service($config['advisory_lock_manager']['connection']))
 
                 // Middlewares
