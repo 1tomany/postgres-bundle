@@ -46,7 +46,7 @@ final class AdvisoryLock
                 'key' => $this->key,
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Querying the status of advisory lock "%s" failed.', (string) $this->name), previous: $e);
+            throw new RuntimeException(sprintf('Querying the status of the advisory lock "%s" failed.', (string) $this->name), previous: $e);
         }
 
         return true === $acquired;

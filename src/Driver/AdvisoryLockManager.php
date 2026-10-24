@@ -4,6 +4,7 @@ namespace OneToMany\PostgresBundle\Driver;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
+use OneToMany\PostgresBundle\Driver\Exception\AcquiringAdvisoryLockFailedException;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 use OneToMany\PostgresBundle\Util\LockKeyUtil;
 
@@ -19,7 +20,7 @@ class AdvisoryLockManager
     }
 
     /**
-     * @throws RuntimeException when acquiring the advisory lock fails
+     * @throws AcquiringAdvisoryLockFailedException when acquiring the advisory lock fails
      */
     #[\NoDiscard('The advisory lock is released when the returned AdvisoryLock is destroyed')]
     public function lock(int|string $lockKey): AdvisoryLock
@@ -31,20 +32,17 @@ class AdvisoryLockManager
                 'key' => $key,
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
+            throw new AcquiringAdvisoryLockFailedException($lockKey, $e);
         }
 
         if (!is_int($pid) || $pid <= 0) {
-            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed because the backend process ID could not be determined.', (string) $lockKey));
+            throw new RuntimeException(sprintf('Acquiring the advisory lock "%s" failed because the backend PID could not be determined.', (string) $lockKey));
         }
 
         return new AdvisoryLock($this->getConnection(), $lockKey, $key, $pid);
     }
 
     /**
-     * Attempts to acquire a session level advisory lock without waiting.
-     * Returns null if the lock is held by another session.
-     *
      * @throws RuntimeException when acquiring the advisory lock fails
      */
     #[\NoDiscard('The advisory lock is released when the returned AdvisoryLock is destroyed')]
@@ -55,11 +53,9 @@ class AdvisoryLockManager
         try {
             $result = $this->getConnection()->fetchNumeric('SELECT pg_backend_pid(), pg_try_advisory_lock(:key)', [
                 'key' => $key,
-            ], [
-                'key' => ParameterType::INTEGER,
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Acquiring advisory lock "%s" failed.', (string) $lockKey), previous: $e);
+            throw new AcquiringAdvisoryLockFailedException($lockKey, $e);
         }
 
         [$pid, $acquired] = false !== $result ? $result : [null, null];
