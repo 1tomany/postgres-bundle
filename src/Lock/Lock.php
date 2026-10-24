@@ -15,9 +15,9 @@ final class Lock
      * @internal {@see OneToMany\PostgresBundle\Driver\LockManager}
      */
     public function __construct(
-        private Connection $connection,
-        private Key $key,
-        private int $pid,
+        private readonly Connection $connection,
+        private readonly Key $key,
+        private readonly int $pid,
     ) {
     }
 
