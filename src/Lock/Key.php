@@ -22,8 +22,9 @@ final class Key implements \Stringable
     /**
      * @throws DomainException when the key is empty
      */
-    public function __construct(int|string|null $key)
-    {
+    public function __construct(
+        int|string|null $key,
+    ) {
         if ('' === $key = trim((string) $key)) {
             throw new DomainException('The key cannot be empty.');
         }
