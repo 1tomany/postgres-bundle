@@ -70,13 +70,10 @@ final class Lock
                     $this->pid, $this->key->getId(),
                 ]);
             } catch (\Throwable $e) {
+                throw new RuntimeException(sprintf('Releasing the advisory lock for the key "%s" failed.', $this->key->getKey()), previous: $e);
             }
 
-            if (isset($e) || (isset($released) && true !== $released)) {
-                throw new RuntimeException(sprintf('Releasing the advisory lock for the key "%s" failed.', $this->key->getKey()), previous: $e ?? null);
-            }
-
-            return true;
+            return true === $released;
         }
 
         return false;
