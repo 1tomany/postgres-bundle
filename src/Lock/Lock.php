@@ -12,7 +12,7 @@ final class Lock
     private bool $released = false;
 
     /**
-     * @var positive-int
+     * @param positive-int $pid
      */
     public function __construct(
         private readonly Connection $connection,
