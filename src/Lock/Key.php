@@ -17,7 +17,7 @@ final class Key implements \Stringable
     /**
      * @var non-empty-string
      */
-    private string $key;
+    private readonly string $key;
 
     /**
      * @throws DomainException when the key is empty
