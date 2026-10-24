@@ -7,7 +7,7 @@ use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function sprintf;
 
-final class AdvisoryLock
+final class Lock
 {
     /**
      * @internal {@see OneToMany\PostgresBundle\Driver\LockManager}
@@ -35,7 +35,7 @@ final class AdvisoryLock
     }
 
     /**
-     * @throws RuntimeException when querying the lock status fails
+     * @throws RuntimeException when querying the status of the advisory lock fails
      */
     public function isAcquired(): bool
     {

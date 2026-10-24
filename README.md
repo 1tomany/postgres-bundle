@@ -1,6 +1,6 @@
 # Doctrine Postgres Bundle for Symfony
 
-This package enhances Postgres for Doctrine.
+This Symfony bundle enhances Postgres for Doctrine.
 
 ## Installation
 
@@ -16,7 +16,7 @@ This bundle is automatically configured to work with the default Doctrine DBAL c
 
 ```yaml
 onetomany_postgres:
-    advisory_lock_manager:
+    lock_manager:
         connection: "database_connection"
 
     middleware:
