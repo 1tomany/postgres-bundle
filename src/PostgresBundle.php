@@ -2,7 +2,7 @@
 
 namespace OneToMany\PostgresBundle;
 
-use OneToMany\PostgresBundle\Driver\AdvisoryLockManager;
+use OneToMany\PostgresBundle\Driver\LockManager;
 use OneToMany\PostgresBundle\Function\EarthDistance\Boundary;
 use OneToMany\PostgresBundle\Function\EarthDistance\Distance;
 use OneToMany\PostgresBundle\Middleware\SetTimeZoneMiddleware;
@@ -23,12 +23,14 @@ class PostgresBundle extends AbstractBundle
      *
      * @param DefinitionConfigurator<'array'> $definition
      */
-    public function configure(DefinitionConfigurator $definition): void
-    {
+    #[\Override]
+    public function configure(
+        DefinitionConfigurator $definition,
+    ): void {
         $definition
             ->rootNode()
                 ->children()
-                    ->arrayNode('advisory_lock_manager')
+                    ->arrayNode('lock_manager')
                         ->addDefaultsIfNotSet()
                         ->children()
                             ->stringNode('connection')
@@ -53,8 +55,11 @@ class PostgresBundle extends AbstractBundle
     /**
      * @see Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface
      */
-    public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
-    {
+    #[\Override]
+    public function prependExtension(
+        ContainerConfigurator $container,
+        ContainerBuilder $builder,
+    ): void {
         if ($builder->hasExtension('doctrine')) {
             $builder->prependExtensionConfig('doctrine', [
                 'dbal' => [
@@ -78,7 +83,7 @@ class PostgresBundle extends AbstractBundle
      * @see Symfony\Component\DependencyInjection\Extension\ConfigurableExtensionInterface
      *
      * @param array{
-     *   advisory_lock_manager: array{
+     *   lock_manager: array{
      *     connection: non-empty-string,
      *   },
      *   middleware: array{
@@ -86,13 +91,17 @@ class PostgresBundle extends AbstractBundle
      *   },
      * } $config
      */
-    public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
-    {
+    #[\Override]
+    public function loadExtension(
+        array $config,
+        ContainerConfigurator $container,
+        ContainerBuilder $builder,
+    ): void {
         $container
             ->services()
                 // Drivers
-                ->set(AdvisoryLockManager::class)
-                    ->arg('$connection', service($config['advisory_lock_manager']['connection']))
+                ->set(LockManager::class)
+                    ->arg('$connection', service($config['lock_manager']['connection']))
 
                 // Middlewares
                 ->set(SetTimeZoneMiddleware::class)
