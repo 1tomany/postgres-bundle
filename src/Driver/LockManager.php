@@ -28,8 +28,8 @@ class LockManager
         }
 
         try {
-            $pid = $this->connection->fetchOne('SELECT pg_backend_pid() FROM pg_advisory_lock(:id)', [
-                'id' => $key->getId(),
+            $pid = $this->connection->fetchOne('SELECT pg_backend_pid() FROM pg_advisory_lock(?)', [
+                $key->getId(),
             ]);
         } catch (\Throwable $e) {
             throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed.', $key->getKey()), previous: $e);
@@ -41,7 +41,7 @@ class LockManager
     /**
      * @throws RuntimeException when acquiring the advisory lock fails
      */
-    #[\NoDiscard('otherwise the lock will be released immediately')]
+    #[\NoDiscard('otherwise the advisory lock will be released immediately')]
     public function tryLock(int|string|Key $key): ?Lock
     {
         if (!$key instanceof Key) {
@@ -49,8 +49,8 @@ class LockManager
         }
 
         try {
-            $pid = $this->connection->fetchOne('SELECT pg_backend_pid() WHERE pg_try_advisory_lock(:id)', [
-                'id' => $key->getId(),
+            $pid = $this->connection->fetchOne('SELECT pg_backend_pid() WHERE pg_try_advisory_lock(?)', [
+                $key->getId(),
             ]);
         } catch (\Throwable $e) {
             throw new RuntimeException(sprintf('Acquiring an advisory lock for the key "%s" failed.', $key->getKey()), previous: $e);
@@ -74,8 +74,8 @@ class LockManager
         }
 
         try {
-            $this->connection->executeStatement('SELECT pg_advisory_xact_lock(:id)', [
-                'id' => $key->getId(),
+            $this->connection->executeStatement('SELECT pg_advisory_xact_lock(?)', [
+                $key->getId(),
             ]);
         } catch (\Throwable $e) {
             throw new RuntimeException(sprintf('Acquiring an advisory transaction lock for the key "%s" failed.', $key->getKey()), previous: $e);

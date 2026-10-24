@@ -9,6 +9,8 @@ use function sprintf;
 
 final class Lock
 {
+    private bool $released = false;
+
     /**
      * @internal {@see OneToMany\PostgresBundle\Driver\LockManager}
      */
@@ -16,9 +18,7 @@ final class Lock
         private Connection $connection,
         private Key $key,
         private int $pid,
-        private bool $released = false,
     ) {
-        $this->released = false;
     }
 
     public function __destruct()
@@ -29,33 +29,28 @@ final class Lock
         }
     }
 
-    public function isReleased(): bool
-    {
-        return $this->released;
-    }
-
     /**
-     * @throws RuntimeException when querying the status of the advisory lock fails
+     * @throws RuntimeException when querying the status of the lock fails
      */
     public function isAcquired(): bool
     {
-        if (
-            $this->isDisconnected()
-            || $this->isReleased()
-        ) {
+        if ($this->released) {
             return false;
         }
 
-        try {
-            $acquired = $this->connection->fetchOne("SELECT true FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND pid = :pid AND objid::bigint = :id AND granted = true", [
-                'pid' => $this->pid,
-                'key' => $this->key->getId(),
-            ]);
-        } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Querying the status of the advisory lock "%s" failed.', $this->key->getKey()), previous: $e);
+        if ($this->connection->isConnected()) {
+            try {
+                $acquired = $this->connection->fetchOne("SELECT true FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND pid = ? AND objid::bigint = ? AND granted = true", [
+                    $this->pid, $this->key->getId(),
+                ]);
+            } catch (\Throwable $e) {
+                throw new RuntimeException(sprintf('Querying the status of the advisory lock "%s" failed.', $this->key->getKey()), previous: $e);
+            }
+
+            return true === $acquired;
         }
 
-        return true === $acquired;
+        return false;
     }
 
     /**
@@ -63,30 +58,27 @@ final class Lock
      */
     public function release(): bool
     {
-        if ($this->isReleased()) {
+        if ($this->released) {
             return false;
         }
 
         $this->released = true;
 
-        if (!$this->isDisconnected()) {
-            return false;
+        if ($this->connection->isConnected()) {
+            try {
+                $released = $this->connection->fetchOne('SELECT CASE WHEN pg_backend_pid() = ? THEN pg_advisory_unlock(?) ELSE false END', [
+                    $this->pid, $this->key->getId(),
+                ]);
+            } catch (\Throwable $e) {
+            }
+
+            if (isset($e) || (isset($released) && true !== $released)) {
+                throw new RuntimeException(sprintf('Releasing the advisory lock for the key "%s" failed.', $this->key->getKey()), previous: $e ?? null);
+            }
+
+            return true;
         }
 
-        try {
-            $released = $this->connection->fetchOne('SELECT CASE WHEN pg_backend_pid() = :pid THEN pg_advisory_unlock(:id) ELSE false END', [
-                'pid' => $this->pid,
-                'id' => $this->key->getId(),
-            ]);
-        } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Releasing the advisory lock for the key "%s" failed.', $this->key->getKey()), previous: $e);
-        }
-
-        return true === $released;
-    }
-
-    private function isDisconnected(): bool
-    {
-        return !$this->connection->isConnected();
+        return false;
     }
 }
