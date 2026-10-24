@@ -12,7 +12,7 @@ final class Lock
     private bool $released = false;
 
     /**
-     * @internal {@see OneToMany\PostgresBundle\Driver\LockManager}
+     * @var positive-int
      */
     public function __construct(
         private readonly Connection $connection,
@@ -27,6 +27,19 @@ final class Lock
             $this->release();
         } catch (\Throwable) {
         }
+    }
+
+    public function getKey(): Key
+    {
+        return $this->key;
+    }
+
+    /**
+     * @return positive-int
+     */
+    public function getPid(): int
+    {
+        return $this->pid;
     }
 
     /**
