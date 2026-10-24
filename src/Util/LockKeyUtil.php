@@ -45,11 +45,6 @@ final readonly class LockKeyUtil
         return implode(':', $bits);
     }
 
-    /**
-     * Hashes a lock key with CRC32, the same approach used by the Symfony
-     * Lock component. The result always fits in the objid column of the
-     * pg_locks view, which keeps querying for a held lock simple.
-     */
     public static function hash(int|string $key): int
     {
         return crc32((string) $key);

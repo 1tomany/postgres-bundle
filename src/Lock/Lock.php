@@ -1,14 +1,13 @@
 <?php
 
-namespace OneToMany\PostgresBundle\Driver;
+namespace OneToMany\PostgresBundle\Lock;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\ParameterType;
 use OneToMany\PostgresBundle\Exception\RuntimeException;
 
 use function sprintf;
 
-final class AdvisoryLock
+final class Lock
 {
     public private(set) bool $released = false;
 
@@ -17,8 +16,8 @@ final class AdvisoryLock
      */
     public function __construct(
         private readonly Connection $connection,
-        public readonly int|string $name,
-        public readonly int $key,
+        public readonly int $id,
+        public readonly string $key,
         public readonly int $pid,
     ) {
     }
@@ -31,6 +30,11 @@ final class AdvisoryLock
         }
     }
 
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
     /**
      * @throws RuntimeException when querying the lock status fails
      */
@@ -41,12 +45,12 @@ final class AdvisoryLock
         }
 
         try {
-            $acquired = $this->connection->fetchOne("SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND pid = :pid AND objid = :key AND granted)", [
+            $acquired = $this->connection->fetchOne("SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND pid = :pid AND objid = :key AND granted", [
                 'pid' => $this->pid,
-                'key' => $this->key,
+                'key' => $this->id,
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Querying the status of the advisory lock "%s" failed.', (string) $this->name), previous: $e);
+            throw new RuntimeException(sprintf('Querying the status of the advisory lock "%s" failed.', $this->key), previous: $e);
         }
 
         return true === $acquired;
@@ -82,13 +86,10 @@ final class AdvisoryLock
         try {
             $released = $this->connection->fetchOne($sql, [
                 'pid' => $this->pid,
-                'key' => $this->key,
-            ], [
-                'pid' => ParameterType::INTEGER,
-                'key' => ParameterType::INTEGER,
+                'key' => $this->id,
             ]);
         } catch (\Throwable $e) {
-            throw new RuntimeException(sprintf('Releasing advisory lock "%s" failed.', (string) $this->name), previous: $e);
+            throw new RuntimeException(sprintf('Releasing advisory lock "%s" failed.', $this->key), previous: $e);
         }
 
         return true === $released;
